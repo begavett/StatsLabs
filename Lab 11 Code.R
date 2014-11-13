@@ -1,4 +1,5 @@
-# If you make a mistake with the hrs.data$Simple variable, you can erase it and start over again using the following command (remove the comment):
+# If you make a mistake with the hrs.data$Simple variable, you can erase it and start over again using the following command 
+# (remove the comment):
 # hrs.data$Simple <- NULL
 
 # From pages 2-3
