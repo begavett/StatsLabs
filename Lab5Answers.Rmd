@@ -1,0 +1,231 @@
+---
+output: pdf_document
+---
+PSY 5810: Lab 5 - Power Analysis and Precision Planning
+========================================================
+
+Assignment: complete the lab tasks as described below. As you work through the lab, you will find 10 exercises embedded within the statistical procedures that you perform. Perform all analyses in R, and submit your input code and output only when specifically requested. Combine your R code with your written answers into a Microsoft Word document, and email this as a single file to Natalie (ngordon3@uccs.edu) or print out the document and turn it in to Natalie by the start of next week's lab. Be sure your full name is in the file or included on the printout.
+
+---
+
+In this lab, we will establish the fundamentals of using R to understand statistical power and to determine sample size requirements for power analysis and precision planning.
+
+## Example
+
+Let's suppose that you are interested in conducting a study that tests your hypothesis that eating chicken noodle soup cures the common cold.
+
+You have decided that you are going to randomly select people from the population, expose them to the cold virus, and wait for them to get sick. Half of your sample will be given one cup of chicken noodle soup at every meal, whereas the other half of your sample (the control group) will be given one cup of hot water at every meal. You will then measure how long (in hours) it takes your participants to recover from their colds. You want to know how many people you need to recruit into your study to give yourself a good chance of obtaining a "significant" finding.
+
+The variables you need to consider when making sample size determinations for statistical power are:
+
+* $\alpha$ [$p$(Type I Error)]
+* $\beta$ [$p$(Type II Error)]
+* $1- \beta$ (power)
+* Cohen's $d$ (standardized mean difference)
+* $N$ (sample size)
+
+You can set your $\alpha$ level to anything you'd like. Convention dictates setting $\alpha = .05$, but other common values are $\alpha = .01$ (more conservative) or $\alpha = .10$ (you're bound to anger some old school statisticians if you choose this one).
+
+Similarly, you can decide to use whatever value of $\beta$ you'd like, but keep in mind that the maximum recommended value for $\beta$ is .20, which gives you a minimum power ($1 - \beta$) of .80. In other words, you should never be willing to give yourself less than an 80% chance of finding a true effect.
+
+The effect of chicken noodle soup vs. hot water on the duration of the common cold is not under your control. Instead, you must make a reasonable estimate of what you think the true effect size is in the population (Cohen's $d$ is a sample statistic; its associated population parameter is $\delta$). You don't have any reasonable guess about the value of $\delta$, so you poll some of your friends to find out whether they eat chicken noodle soup when sick and how long their colds tend to last. 
+
+Under the appropriate column (soup: Yes or No) on the whiteboard, indicate how many hours - on average - your colds tend to last when you get sick.
+
+Once everyone has provided data about the duration of their colds and whether or not they eat chicken noodle soup when sick, you can use these data to estimate the true effect of chicken noodle soup on the common cold.
+
+>**Exercise 1. Based on the data written on the board, create the following variables in `R`: `control.data` (containing raw data from the control group), `cns.data` (containing raw data from the chicken noodle soup group), `control.m` (containing the mean of the control group), `control.s` (containing the standard deviation of the control group), `control.n` (containing the sample size of the control group), `cns.m` (containing the mean of the CNS group), `cns.s` (containing the standard deviation of the CNS group), and `cns.n` (containing the sample size of the CNS group). Provide a copy of your input.**
+
+```{r lab5opts, echo=FALSE}
+library(knitr)
+opts_chunk$set(eval = TRUE, tidy=TRUE, tidy.opts=list(width.cutoff=70))
+```
+
+```{r lab5e1, echo=TRUE}
+control.data <- c(48, 336, 48, 72, 96, 120, 288, 216, 72, 96, 96, 96, 72, 48, 71)
+cns.data <- c(120, 48, 144, 120, 96)
+control.m <- mean(control.data)
+control.s <- sd(control.data)
+control.n <- length(control.data)
+cns.m <- mean(cns.data)
+cns.s <- sd(cns.data)
+cns.n <- length(cns.data)
+```
+
+We can either calculate Cohen's $d$ effect size using the formula or by using a function available in `R`. Let's try them both to make sure that we get the same answer.
+
+The formula for Cohen's $d$ is $\frac{M_{CNS} - M_{Control}}{s_{Control}}$
+
+Calculating Cohen's $d$ in `R` requires the `smd.c()` function in the package `MBESS`. 
+
+>**Exercise 2. Store the value produced by the `smd.c` function as an object called `cns.d`. Provide your input and output using these two methods for calculating Cohen's $d$. Did you get the same answer using both methods? Why or why not?**
+
+```{r lab5e2, echo=TRUE}
+(cns.m - control.m)/control.s
+
+library(MBESS)
+cns.d <- smd.c(Group.T = cns.data, Group.C = control.data)
+cns.d
+```
+
+We have identified the variables needed to estimate our required sample size: $\alpha$, $1 - \beta$, and effect size (Cohen's $d$). 
+
+Let's start by using the conventional recommendations for $\alpha$ and $1 - \beta$, .05 and .80, respectively.
+
+Using these estimates, what would happen if we recruited a total sample size ($N$) of 100, with $n = 50$ randomly assigned to the chicken noodle soup group and $n = 50$ randomly assigned to the control group?
+
+>**Exercise 3. Using the data taken from the white board, provide the two parameters (and their values) needed to model the sampling distribution of sample means when $H_0$ is true. Then, provide the same answer for the sampling distribution of sample means when $H_1$ is true.**
+
+```{r lab5e3, echo=TRUE}
+# Mean of sampling distribution for null
+control.m
+# SD of sampling distribution (SEM) for null
+control.s/sqrt(50)
+
+# Mean of sampling distribution for treatment
+cns.m
+# SD of sampling distribution (SEM) for treatment
+cns.s/sqrt(50)
+```
+
+>**Exercise 4. Based on the sampling distribution of sample means for the case where $H_0$ is true, what are the values associated with the extreme 5% (two-tailed) of that distribution? Provide your code and output.**
+
+```{r lab5e4, echo=TRUE}
+control.sem <- control.s/sqrt(50)
+lower.cv <- qnorm(.025, control.m, control.sem)
+upper.cv <- qnorm(.975, control.m, control.sem)
+lower.cv
+upper.cv
+```
+
+From our hypothetical sample size of $n = 50$ in the control group, we have identified the following:
+
+* The sampling distribution of sample means for study results that are plausible when $H_0$ is true.
+* The sampling distribution of sample means for study results that are plausible when $H_1$ is true.
+* The values of the $H_0$ sampling distribution of sample means that are in the most extreme 5% of that distribution.
+
+Next, we have to be prepared for a range of study means (when $n = 50$) that could plausibly be obtained from the population sampling distribution of sample means when $H_1$ is true.
+
+What percentage of possible sample means drawn from the $H_1$ sampling distribution would be considered "significant" at the $\alpha = .05$ level? In order to answer this question, we need to calculate the area under the $H_1$ sampling distribution that is more extreme than the critical values reported above in Exercise 4.
+
+>**Exercise 5. What percentage of all possible sample means drawn from the $H_1$ distribution are more extreme than the critical values taken from the $H_0$ sampling distribution? Provide your code and output.**
+
+```{r lab5e5, echo=TRUE}
+cns.sem <- cns.s/sqrt(50)
+lower.p <- pnorm(lower.cv, cns.m, cns.sem) 
+lower.p
+upper.p <- pnorm(upper.cv, cns.m, cns.sem, lower.tail = FALSE)
+upper.p
+lower.p + upper.p
+```
+
+The answer to Exercise 5 represents your statistical power under the conditions specified above. Is the power sufficient to meet the minimum recommended value? 
+
+What would our power be if we used a sample size of $n = 100$ per group instead of $n = 50$? Again, we'd need to know the parameters of both sampling distributions, the critical values for the extreme 5% (two-tailed) of values that could be expected when $H_0$ is true, and the proportion of the $H_1$ sampling distribution that falls outside of those critical values. 
+
+>**Exercise 6. What is the statistical power in the above example when $n = 100$ per group? Provide your code and output.**
+
+```{r lab5e6, echo=TRUE}
+control.sem <- control.s/sqrt(100)
+cns.sem <- cns.s/sqrt(100)
+lower.cv <- qnorm(.025, control.m, control.sem)
+lower.cv
+upper.cv <- qnorm(.975, control.m, control.sem)
+upper.cv
+lower.p <- pnorm(lower.cv, cns.m, cns.sem) 
+upper.p <- pnorm(upper.cv, cns.m, cns.sem, lower.tail = FALSE)
+lower.p + upper.p
+```
+
+>**Exercise 7. Revise your answer to Exercise 6 for the case when $\alpha = .01$. Provide your code and output.**
+
+```{r lab5e7, echo=TRUE}
+lower.cv <- qnorm(.005, control.m, control.sem)
+lower.cv
+upper.cv <- qnorm(.995, control.m, control.sem)
+upper.cv
+lower.p <- pnorm(lower.cv, cns.m, cns.sem)
+lower.p
+upper.p <- pnorm(upper.cv, cns.m, cns.sem, lower.tail = FALSE)
+upper.p
+lower.p + upper.p
+```
+
+>**Exercise 8. Have you identified the minimum sample size necessary to achieve power of .80? If yes, what is the sample size? If no, how would you go about finding the necessary sample size?**
+
+```{r lab5e8, echo=TRUE}
+# No, not even close to 80% power. Need to continue to increase sample size and re-check power in an iterative process until the sample size that produces 80% power is identified.
+```
+
+Fortunately, power analysis does not have to be as effortful as the exercises above make it seem. There is a package in `R` called `pwr` that can be used to identify the appropriate sample size given $\alpha$, $\beta$, and $d$. Install the `pwr` package, load it, and look at the help file for the `pwr.norm.test` function.
+
+We can go about performing a power analysis using the following command:
+
+```{r lab5ex1, echo=TRUE}
+library(pwr)
+power.cns <- pwr.norm.test(d = cns.d, n = NULL, sig.level = .05, power = .80, alternative = "two.sided")
+power.cns
+```
+
+Then, if we print the contents of the `power.cns` object we just created, we can see the sample size that is required to meet our need for power. Note that to obtain the necessary sample size, we set `n = NULL` and provide values for `d`, `sig.level`, and `power`. Three of these four arguments must be assigned values, whereas the fourth must be assigned a value of `NULL`. That tells the program to solve for the value that is set to `NULL`. If we had a fixed sample size and instead wanted to know what kind of power we could obtain with that sample size, we would set the sample size to equal `n` and set power to `NULL`.
+
+What if we wanted to see how power varies as a function of sample size? We can use some slightly more complicated code to visually examine how sample size affects power. First, we create a variable of all possible sample sizes we want to investigate. Then we ask for power calculations at each of those sample sizes. Let's see what happens to our power when our sample size goes from 1 to 500 per group.
+
+```{r lab5ex2, echo=TRUE}
+all.ns <- 1:500
+all.powers <- pwr.norm.test(d = cns.d, n = all.ns, sig.level = .05, power = NULL, alternative = "two.sided")
+plot(all.ns, all.powers$power, type = "l", xlab = "n", ylab = "Power", ylim = c(0,1))
+abline(h = .8, lty = 2, col = "orange")
+```
+
+To this plot, we can add different curves that show us the effect of using different $\alpha$ levels. Use the code below.
+
+```{r lab5ex3, echo=TRUE}
+all.powers.01 <- pwr.norm.test(d = cns.d, n = all.ns, sig.level = .01, power = NULL, alternative = "two.sided")
+
+all.powers.10 <- pwr.norm.test(d = cns.d, n = all.ns, sig.level = .10, power = NULL, alternative = "two.sided")
+
+plot(all.ns, all.powers$power, type = "l", xlab = "n", ylab = "Power", ylim = c(0,1))
+abline(h = .8, lty = 2, col = "orange")
+lines(all.ns, all.powers.01$power, type = "l", lty = 2, col = "red")
+lines(all.ns, all.powers.10$power, type = "l", lty = 3, col = "blue")
+legend("bottomright", lty = c(3, 1, 2), col = c("blue", "black", "red"), legend = c(".10", ".05", ".01"), title = "Alpha")
+```
+
+Note how differences in $\alpha$ affect the relationship between sample size and power.
+
+## An Alternative to Power
+
+Power is only necessary when performing null hypothesis significance testing (NHST). An alternative to power analysis is based on some desired degree of precision in our confidence intervals. This is known as **precision planning**. As we have discussed, confidence intervals are preferable to NHST, but they can still be used for that purpose, if desired. The same is true for confidence intervals and power analysis. The example below will illustrate how.
+
+```{r lab5ex4, echo=TRUE}
+# Here, we create a vector called sample.sizes that contains the numbers 5 to 150 in increments of 5
+sample.sizes <- seq(5, 150, 5) 
+# Here, we create the standard errors for means taken from the Chicken Noodle Soup population at all of the sample sizes created in the previous step.
+cns.sem <- cns.s/sqrt(sample.sizes)
+ # Calculate the 95% Confidence Interval widths for the CNS data at a variety of sample sizes
+cns.95CI <- 1.96 * cns.sem
+# Plot the data
+library(plotrix)
+plotCI(x = sample.sizes, y = rep(cns.m, length(sample.sizes)), liw = cns.95CI, uiw = cns.95CI,  xlab = "Sample Size", ylab = "Means and Confidence Intervals", pch = 16)
+abline(h = control.m, lty = 2, col = "green")
+```
+
+>**Exercise 9. Describe what is being shown in the plot you just created. If $H_0$ is the mean of the control group, then how can precision planning be used to perform NHST and power analysis?**
+
+```{r lab5e9, echo=TRUE}
+# The 95% CI widths for various sample sizes. With larger sample sizes come more precise estimates of the populaiton parameters (smaller CI widths). If the null is fixed at the value of the control mean, then we would use these confidence intervals to find the sample size that yields 95% CIs that don't overlap the mean of the control group. That would give us an estimate of the sample size needed to get our margin of error small enough (precision good enough) to reject the null.
+```
+
+Precision planning means that, instead of selecting a desired value for power ahead of time, you select a desired degree of precision ahead of time. In the hypothetical study we have been using as the example for this lab, we are seeking to estimate the impact of eating chicken noodle soup on the duration of the common cold. One parameter we are estimating is the mean duration of the common cold for people who eat chicken noodle soup. If I told you that by eating chicken noodle soup, your cold would last anywhere from 1 to 100 hours, would you be impressed? I hope not! But what if I told you that the average person's cold lasts for 70-75 hours when eating chicken noodle soup? That is definitely more useful information. If I wanted to achive this level of precision before deciding on my sample size, I would have to know in advance the size of the sample needed to allow me to reach this degree of precision (i.e., $\pm$ 3 hours). In other words, I would need to specify in advance, that I wanted the widths of my 95% confidence intervals to be 3 hours. Then, I would determine the sample size that would allow me to achieve that degree of precision. 
+
+Precision planning can be performed in `R` using the `MBESS` package. 
+
+>**Exercise 10. Look at the help file for the function `ss.aipe.smd` in the `MBESS` package. Using this function and the effect size stored in the `cns.d` object, determine the necessary sample size to estimate the standardized effect of chicken noodle soup on the common cold with a precision of $\pm$ .1 units of $d$ (a full CI width of .2). This function should be based on 95% confidence intervals and a 90% degree of certainty. Provide your code and output. What is the required TOTAL sample size?**
+
+```{r lab5e10, echo=TRUE}
+library(MBESS)
+ss.aipe.smd(delta = cns.d, conf.level = .95, width = .2, which.width = "Full", degree.of.certainty = .90)
+# Total sample size is twice the value we obtained, since we have 2 groups.
+2*ss.aipe.smd(delta = cns.d, conf.level = .95, width = .2, which.width = "Full", degree.of.certainty = .90)
+```

@@ -1,0 +1,321 @@
+---
+output: pdf_document
+---
+PSY 5810: Lab 1 - Intro to R and RStudio
+========================================================
+
+*Complete the tasks embedded in this lab, paste relevant output into a Word document, and turn the completed assignment in to Natalie by next Wednesday at 9:00 am.*
+
+The goal of this lab is to introduce you to `R` and RStudio, which you’ll be using throughout the course both to learn the statistical concepts discussed in the textbook and also to analyze real data and come to informed conclusions. To straighten out which is which: `R` is the name of the programming language itself and RStudio is a convenient interface.
+
+As the labs progress, you are encouraged to explore beyond what the labs dictate; a willingness to experiment will make you a much better programmer. Before we get to that stage, however, you need to build some basic fluency in `R`. Today we begin with the fundamental building blocks of `R` and RStudio: the interface, reading in data, and basic commands.
+
+If you are using a lab computer, `R` and RStudio are already installed. If you are using your own computer, you will need to download and install these programs yourself. `R` can be downloaded from http://cran.revolutionanalytics.com/. RStudio can be downloaded from http://www.rstudio.com/products/rstudio/download/. Install R before you install RStudio.
+
+Whether you're using a lab computer or your own computer, you only need to open the RStudio program, not the `R` program. If you haven't already, open the RStudio program now. When you open the program, you may be asked to choose a version of `R` to run. If you are using a lab computer or if your own computer has a 64-bit processor (most new computers do), then choose the 64-bit version. If you're not sure, choose the 32-bit version (you probably won't notice a difference between the two versions anyway).
+
+When you open RStudio, you should see a screen that looks like the one shown in this picture.
+
+![RStudio](RStudio.png)
+
+
+The panel in the upper right contains your workspace as well as a history of the commands that you’ve previously entered. Any plots that you generate will show up in the panel in the lower right corner.
+
+The panel on the left is where the action happens. It’s called the console. Every time you launch RStudio, it will have the same text at the top of the console telling you the version of `R` that you’re running. Below that information is the prompt (`>`). As its name suggests, this prompt is really a request, a request for a command. Initially, interacting with `R` is all about typing commands and interpreting the output. These commands and their syntax have evolved over decades and now provide what many users feel is a fairly natural way to access data and organize, describe, and invoke statistical computations.
+
+To get started, it is important to make sure that your computer is set up appropriately to take advantage of all of `R`’s features. In the bottom right corner of RStudio, you should see a file window showing the contents of your home folder. Click on the “New Folder” button and give the new folder the name “RLibs”. Next, click on the Windows Start Menu and open the “Notepad” application. In the blank Notepad window, type the following, exactly as it is written:
+
+`R_LIBS=~/RLibs`
+
+Then save this file in your “Libraries/Documents/” folder with the name .Renviron (make note of two things: this file name *starts* with a dot and *does not end with .txt*. DO NOT SAVE THE FILE WITH .TXT AT THE END). Now, return to RStudio. In the bottom right window you should now see the .Renviron file as well as the “RLibs” folder that you just created. If you do not see both of these things, please raise your hand and call on the instructor or the TA.
+
+## Entering Data
+
+Although it is rare that researchers will enter their data directly into `R` (usually because the data files are too large to manually enter), entering data manually is a good way to understand how `R` stores data. 
+
+### Storing data as a single numeric value
+
+Type the following command into the top left corner (the Script window) of RStudio.
+
+`x <- 5`
+
+Then, with your cursor on the same line, push Ctrl+Enter (Windows) or Command+Enter (Mac). You should see that same line of text reproduced in the bottom left corner (the Console). When you see your command reproduced in blue without any other messages, errors, or warnings (usually errors are in red and warnings are in black), that means the command executed successfully.
+
+Another way to check to see if your command executed successfully is to check the top right window of RStudio, making sure that the "Environment" tab is active. If everything worked, you should see a header called "Values" with `x` and `5` listed. That means that the variable `x` is acting as a placeholder for the number `5`. Next, type the command below into the Script window (top left).
+
+`X <- 100` (note the X here is capitalized)
+
+Again, run this command by pressing Ctrl+Enter (Windows) or Command+Enter (Mac) when your cursor is on the same line as the code you want to run.
+
+Once you execute that command, look again to the top right window under the "Environment" tab. You should see the previous values of the number `5` stored as the variable `x`, and the new values of the number `100` stored as the variable `X`. This is meant to illustrate that variable labels are case sensitive. The variable `x` is treated as separate from the variable `X`. Be careful with the case you use in R, because upper and lower case are interpreted differently.
+
+### Storing data as a single character value
+
+We can not only store data as numeric, but also as text ("string" or "character"). For example, type the command below into your Script window and then execute.
+
+`y <- "bologna"`
+
+If that executes correctly, you will see the addition of `y` and `"bologna"` added to your Enviroment (top right). Note that, unlike numbers, character data are stored with quotation marks, and require them to be entered using quotation marks. If `R` sees text that is not surrounded by quotation marks, then it thinks the text is referring to the name of a variable, not the contents of the variable. To illustrate, try the command below:
+
+`y <- bologna`
+
+Notice that this produced an error in the Console (bottom left). Why? In this instance, the word `bologna` was not entered with quotation marks. Which means that `R` interprets that command as saying "take the contents of the data stored in the variable called `bologna` and store those contents in the variable called `y`." The problem with that is that we have not created a variable called `bologna`. We have only created variables called `x` (containing the number 5), `X` (containing the number 100), and `y` (containing the character `"bologna"`). If we want to create a variable called `bologna`, we could do this:
+
+`bologna <- 8`
+
+After executing that command, your Environment (top right) should now contain `x` (containing the number 5), `X` (containing the number 100), `y` (containing the character `"bologna"`), and `bologna` (containing the number 8).
+
+### Examining the contents of variables
+
+Another way to view the contents of the variables you created is to run a command with the name of the variable you're interested in. There is a long way and a short way of doing this:
+
+`print(x)` is the same as 
+
+`x`
+
+Try doing both of these. You should see that `R` prints out the number `5` in the Console (bottom left) when you execute both of these commands. Then try doing the following:
+
+`X`
+
+`y`
+
+`bologna`
+
+After executing these three commands, the Console (bottom left) should tell you that `100` is stored in the variable `X`, `"bologna"` is stored in the variable `y`, and `8` is stored in the variable `bologna`.
+
+### Using `R` to perform mathematical operations
+
+Whether or not you're using variables such as `x` and `y`, R can act as a calculator. For instance, execute the following command:
+
+`10 * 5`
+
+The asterisk tells `R` to do multiplication; as such, you should see the number `50` output to your console. Rather than performing mathematic operations on numbers, `R` can also perform mathematic operations on variables. Execute the command below:
+
+`x * X`
+
+This should also produce the output `50` in the console, because the variable `x` contains the number `5` and the variable `X` contains the number `10`. Here, `x * X` = `5 * 10` = 50. 
+
+More math possibilities include:
+
+`x + bologna` (addition)
+
+`X - x` (subtraction)
+
+`bologna / X` (division)
+
+`X^2` (exponentiation)
+
+We will run into a problem when we try to use the variable `y` in any mathematics operations, however, because it contains the character `"bologna"` which is non-numeric.
+
+`x * y`
+
+Run the above command and look at the error message. Sometimes, `R` error messages are very cryptic. This one, however, makes sense given what we know about the data stored in the `y` variable.
+
+Thus far, we've been dealing with very simple data. Let's add a little more complexity.
+
+`z <- c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)`
+
+>**Question 1. When you execute this command, what do you see stored in `z` when you look at your Environment panel (top right)? Based on your answer to that question, what do you think is the purpose of placing `c( )` around that series of numbers?**
+
+>Answer: The numbers 1 through 10 (or `num [1:10] 1 2 3 4 5 6 7 8 9 10`). The `c()` combines the numbers into one object.
+
+Now that we've created a new variable, we can also use that variable in mathematical operations. Execute the command below.
+
+`z * X`
+
+>**Question 2. Based on that output, describe how `R` performs mathematical operations when using variables that are used to store more than one piece of data (like `z` in this example).**
+
+>Answer: If an object/variable has more than one piece of data, then the mathematical operation is used on each data point in that variable.
+
+### Saving the results of an operation into a new variable
+
+Many times, we would like to be able to save the results of some operation we performed in order to use later. For example, if we wanted to save the results of the `z * X` calculations to a new variable, we could do the following:
+
+`zX <- z*X`
+
+This tells `R` to "create a new variable called `zX` and use that variable to store the results that we obtain when we multiply `z` times `X`."
+
+If we want to see what's stored in `zX`, we can just ask `R` to print them for us.
+
+`zX`
+
+That should give us the same numbers we obtained when we multiplied the two variables together. Only this time, they are now saved inside a new variable for us to access later. This can be especially helpful when we are performing statistical analyses.
+
+### Using `R` to perform statistical operations
+
+Statistical analyses are usually performed by using what `R` calls "functions." An example of a function is `mean()`. This function, as you might expect, calculates the mean of one or more numbers. If we wanted to take the mean of `X` (which is being used to store the number 10), we would type:
+
+`mean(X)`
+
+Obviously, the mean of 10 is 10. What about the mean of multiple numbers? Remember, we stored the numbers 1 through 10 in the variable called `z`.
+
+`mean(z)`
+
+The output should give you the average of the integers 1 through 10. How about the mean of `z` times `X`?
+
+`mean(zX)`
+
+That gives you the mean of the data we obtained when we multiplied `z` times `X`.
+
+`mean.zX <- mean(zX)`
+
+>**Question 3. In plain English, describe what the command above is telling `R` to do.**
+
+>Answer: Take the mean of the variable `zX` and save it as a new variable called `mean.zX`.
+
+As you would expect, `R` calculates the standard deviation the same way it calculates the mean. Try the command below.
+
+`sd(zX)`
+
+>**Question 4. What command would you execute in `R` if you wanted to calculate the standard deviation of `zX` and save it as a variable called `sd.zX`?**
+
+>Answer: `sd.zX <- sd(zX)`
+
+### Obtaining help using `R`'s functions
+
+Functions such as `mean()` and `sd()` often have multiple options available to users to allow flexibility in terms of customizing the results to give the user exactly what s/he wants. In order to learn about the options available for a given function, there are help files in `R` that provide guidance. The quickest and easiest way to access the help files is to use the `?` character before the name of a function. For example, to look at the help files for the `mean` function, you would execute the following command:
+
+`?mean`
+
+which is the same thing as executing
+
+`help(mean)`
+
+The help file will open up in the bottom right panel of RStudio.
+
+>**Question 5. Based on the help file for the `mean` function, how would you calculate the mean of a variable that contains some missing data points?**
+
+>Answer: `mean(variable, na.rm = TRUE)`
+
+### Importing data from an external source
+
+As mentioned previously, it is unlikely that you will be entering all of your data by hand into `R`. Instead, data sets are usually saved in some other spreadsheet program and imported into `R`. Today, you'll learn how to import data from a .csv (**c**omma **s**eparated **v**alues) file, an Excel spreadsheet, and a SPSS file.
+
+#### CSV file
+
+Open your web browser and navigate to the web page for this course (http://bit.ly/PSY5810). Inside the "Laboratory Assignments" folder is a "Lab 1" folder containing a file called "Infidelity.csv". This file is taken from an example used in your textbook. If you right-click on this file name, you should see an option to save the linked file. Save this file to your `/Libraries/Documents` folder and return to RStudio. Keep your web browser open.
+
+In RStudio, you will use a command to import this data file, saving it with a variable name. You can give it any name you choose, just remember that case matters. In this example, we'll call the file Lab1DataCSV.
+
+`Lab1DataCSV <- data.frame(read.csv("Infidelity.csv", header = TRUE))`
+
+```{r, echo=FALSE}
+Lab1DataCSV <- data.frame(read.csv("Infidelity.csv", header = TRUE))
+```
+
+The `read.csv` function is used to import files in .csv format. So the first argument that should be entered for this function is the name of the file, in quotation marks. Because the first row of this file contains a header (column labels), we also need to add the argument `header = TRUE`) to our function, as seen above. In addition, we've wrapped the function `data.frame()` around the `read.csv()` function in order to make sure that the .csv file gets imported as a data frame. To ensure that executing the above command loaded the data correctly, run the command shown below:
+
+`Lab1DataCSV`
+
+You should see the data appear in your console. If it does not, ask your TA for help.
+
+#### Excel file
+
+Go back to the web browser and right-click on the .xlsx document (Excel file) to the same place that you saved the .csv file. Keep your browser open and return to RStudio.
+
+Importing Excel files is not part of the "base" package in `R`, which means that we need to add some additional functionality to `R` to allow it to gain this capability. To install the add-on package called "XLConnect", use the command below:
+
+`install.packages("XLConnect", dependencies = TRUE)`
+
+This command downloads the package called "XLConnect" (remember, case matters). Adding the additional argument `dependencies = TRUE` also asks `R` to install any additional packages that XLConnect depends on. It is important to note that you only need to install a package once on a given computer. Once it is installed it remains installed until you remove it or until you upgrade to a later version of `R`. To verify that the package is installed, look at the lower right panel of RStudio. You may need to click on the "Packages" tab to see the list of installed packages. Scroll all the way down to the bottom, and you should see the "XLConnect" package listed. In order to load the package, one additional step is needed. You can either check the box next to "XLConnect" to load it, or you can execute the following command:
+
+`library(XLConnect)`
+
+Once XLConnect is loaded, we can use it to import the Excel file and save it as a new variable:
+
+`Lab1DataXL <- readWorksheetFromFile("Infidelity.xlsx", sheet = 1)`
+
+```{r, echo=FALSE, message=FALSE}
+library(XLConnect)
+Lab1DataXL <- readWorksheetFromFile("Infidelity.xlsx", sheet = 1)
+```
+
+#### SPSS file
+
+Finally, let's import different data saved as an SPSS file. Again, the correct file must be downloaded and saved from the lab webpage. The file is called "stocks.sav." Importing it into `R` requires that we load an installed package called `foreign`.
+
+`library(foreign)`
+
+`Lab1DataSPSS <- read.spss("stocks.sav", to.data.frame = TRUE)`
+
+`R` usually produces a warning message when importing SPSS data, but don't worry, it likely loaded correctly. You can check the Enviroment panel (top right) to see if it is listed. 
+
+#### Exploring your data
+
+When checking to see if it's there, you may notice that it's a big file - 251 rows and 24 columns - which is too big to display easily in `R`. Instead of looking at the entire file, we can look at the first few rows (known as the "head" of the file).
+
+`head(Lab1DataSPSS)`
+
+If we only want to know the column names in our data, we can use the `names` command:
+
+`names(Lab1DataCSV)`
+
+If we want to examine the **str**ucture of the data, we can use the `str` command:
+
+`str(Lab1DataXL)`
+
+`str(Lab1DataCSV)`
+
+Looking at the two structures for the Excel data and the CSV data, you'll notice a difference in terms of the `Gender` variable. In the data we imported from Excel, `Gender` is of the type `chr`, or "character," whereas the dat we imported from the CSV file is listed as a `Factor`. Factors are ways of storing data that are organized into distinct groups (usually nominal data such as gender). 
+
+### Working with specific variables within a data frame.
+
+Now that we are working with more complex data, in the way of data frames, we'll need to learn how to examine individual variables (columns) within those data frames. For instance, if you want to see all of the data for the `Self` variable within the `Lab1DataCSV` object, you would execute the following command:
+
+`Lab1DataCSV$Self`
+
+Notice what we did: we typed the name of the data frame, and specifically asked for one column (`Self`) of that data frame to be isolated, by using the `$` to separate the name of the data frame from the name of the column. That is the notation used by `R` to work with columns of data within a data frame.
+
+This has been a fairly detailed first exposure to `R`, so we'll stop here. On your own, please complete the following tasks. You may need to refer to the *Field* text, the *Fox* text, or a Google search to help you complete the final five tasks of this assignment.
+
+>**Question 6. What is the mean of the `Partner` variable within the Excel file we imported (`Lab1DataXL`)? Also show the code you should use to answer this question.**
+
+>Answer:
+
+```{r Lab1Q6}
+mean(Lab1DataXL$Partner)
+```
+
+>**Question 7. What is the standard deviation of the `Partner` variable within the Excel file we imported (`Lab1DataXL`)? Also show the code you should use to answer this question.**
+
+>Answer:
+
+```{r Lab1Q7}
+sd(Lab1DataXL$Partner)
+```
+
+>**Question 8. What is the code you would use to create a new column called `PxS` within the `Lab1DataCSV` variable, which contains the value of the `Partner` column multiplied by the `Self` column?**
+
+>Answer:
+
+```{r Lab1Q8}
+Lab1DataCSV$PxS <- Lab1DataCSV$Partner * Lab1DataCSV$Self
+```
+
+>**Question 9. What is the code you would use to eliminate the `Gender` column from the `Lab1DataCSV` variable and storing the new data frame (without `Gender`) as a variable called `L1noG`?**
+
+> Answer: 
+
+> ```
+> Lab1DataCSV$Gender <- NULL
+> L1noG <- Lab1Data
+> ```
+
+> Or
+
+> ```
+> L1noG <- Lab1Data
+> L1noG$Gender <- NULL
+> ```
+
+> Or
+
+> `L1noG <- subset(Lab1DataCSV, select = c(X, Partner, Self))`
+
+> Or
+
+> `L1noG <- subset(Lab1DataCSV, select = -Gender)`
+
+>**Question 10. What code would you use to change the `Gender` column in the `Lab1DataXL` variable from a character to a factor?**
+
+>Answer: `Lab1DataXL$Gender <- factor(Lab1DataXL$Gender)`

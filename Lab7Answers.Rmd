@@ -1,0 +1,223 @@
+---
+output: pdf_document
+---
+PSY 5810: Lab 7 - Meta Analysis
+========================================================
+
+In this lab, we will conduct a meta analysis of previously published research. The topic of the meta analysis is the effect of St. John's wort, an herbal suppmenent, on depression symptoms. 
+
+As we have discussed in class, the most essential part of conducting a high-quality meta analysis is the use of appropriate inclusion and exclusion criteria to ensure that all of the studies included in the meta analysis are scientifically rigorous. The randomized controlled trial (RCT) is one of the best research methodologies for examining the effects of an intervention such as a pharmaceutical. Therefore, we should only include placebo-controlled, double-blind RCTs in our meta analysis. For efficiency, the research we will be using in this meta analysis has been pre-selected and can be found at the course webpage, http://bit.ly/PSY5810. Navigate to this webpage and find the "Laboratory Assigments" folder, which contains a sub-folder called "Lab7 Materials." This folder contains one Microsoft Excel spreadsheet and nine pdf articles that we will include in the meta analysis. 
+
+Open the Microsoft Excel spreadsheet. Notice that some of the data have already been filled in for you. The necessary data for a meta analysis such as this, which is based on two groups, a control group (placebo) and an experimental group (St. John's wort) included the sample size, mean, and standard deviation for both groups. As you may recall, these data will allow us to use a mean difference (either unstandardized or standardized) as our effect size. Your first task will be to fill in the missing data by gathering that information from each relevant paper (pdf file) and incorporating it into the Microsoft Excel spreadsheet.
+
+>**Exercise 1. Once you have entered all of the relevant data that was missing from the spreadsheet, import your completed Excel table into a Microsoft Word document (e.g., by copy-paste or by entering the data by hand into a new Microsoft Word table).**
+
+```{r lab7opts, echo=FALSE}
+library(knitr)
+opts_chunk$set(eval = TRUE, tidy=TRUE, tidy.opts=list(width.cutoff=80))
+```
+
+```{r answer1}
+# The results should match up with the Lab7Data.csv file.
+```
+
+Once you have your data entered accurately, the next step is to import the data file into RStudio. It's generally easier to work with data that's in .csv (comma separated values) format, so in Excel, click `File -> Save As...` and save the file with the .csv extension (accessible from the pull-down menu underneath the file name box). For ease of access, you should save your file in the Documents/Libraries folder, where you had previously created the folder called "RLibs."
+
+Now open RStudio. In the bottom right panel, under the "Files" tab, you should see the "Lab7Data.csv" file include in that file window. To load the file into RStudio, use the following command.
+
+```{r load,eval=TRUE}
+SJW.data <- read.csv("Lab7Data.csv")
+```
+
+Once our data set is loaded, we can examine it to make sure that is has been imported properly, using the following commands.
+
+```{r examine,eval=TRUE}
+# This command simply prints the data file to our screen
+SJW.data
+
+# This command explores the structure of the data file.
+str(SJW.data)
+
+# And with this command we can summarize our data.
+summary(SJW.data)
+```
+
+Before we move on, we need to be clear on what it is that we're measuring. The dependent variable in each of these studies is data obtained from the Hamilton Rating Scale for Depression (HAM-D), which is a questionnaire administered by a health care provider or researcher (not simply a form that the patient fills out on his/her own). 
+
+>**Exercise 2. Look over the HAM-D here**  
+>**(http://healthnet.umassmed.edu/mhealth/HAMD.pdf) and write a one-paragraph summary about how you might interpret HAM-D scores in the context of a treatment trial for depression. Take a close look at the summary data, which you obtained with the `summary()` command. What do these data tell you about the study results as a whole?**
+
+```{r answer2}
+# For this answer, we're just looking for a decent description of the HAM-D (e.g., range of possible scores, higher scores indicating greater levels of depressive symptoms, specific content areas assessed) and a description of the 9 studies (range of sample sizes, means, and standard deviations for the two groups, average HAM-D scores for both groups)
+```
+
+Now that we have our data imported appropriately and we have a good sense for the "meaningfulness" of the data, we can proceed in our first step toward the analytics of meta analysis: calculating the effect size. We could choose to use either a standardized effect size (e.g., Cohen's $d$) measure or an unstandardized effect size (e.g., unstandardized mean difference) as our outcome measure.
+
+>**Exercise 3. In one paragraph, compare and contrast the relative strengths and weaknesses of using standardized and unstandardized effect size measures. Which would you choose for this meta analysis, and why?**
+
+```{r answer3}
+# Should include something to the effect of unstandardized gives you scores in the original scale, which might make things more interpretable (e.g.. HAM-D change of 5 points might be easier to understand than HAM-D change of .25 standard deviations). In contrast, standardized effect sizes allow you to make comparisons across different studies that might use different measures (e.g., BDI-II). Both can be useful or misleading depending on how the're used. Would probably choose unstandardized for this meta analysis because it seems more important to know the number of points the HAM-D should be expected to change. If we were hoping to compare with other studies using different measures of depression (e.g., BDI-II, we would choose the standardized ES approach.)
+```
+
+To calculate our effect sizes, we will use the same package that will be used to perform the meta analysis, which is called `metafor`. If you don't have `metafor` installed (this should be the case for all of you), you'll need to install it (you only need to do this once per computer) and then load it, which is done using the following commands.
+
+```{r load.metafor,eval=TRUE,message=FALSE}
+#install.packages("metafor", dependencies = T)
+
+library(metafor)
+```
+
+Once the `metafor` package has been loaded, we can use its functions to calculate both unstandardized and standardized effect sizes. We'll save the two types of effect sizes in two different objects, which will allow us to work with both as we go along.
+
+```{r calc.es,eval=TRUE,warning=FALSE}
+# This command creates a new object called SJW.data.umd, which stands for "St. John's Wort data, unstandardized mean difference." The `escalc` (effect size calculator) function takes a number of arguments that appear complicated at first, but that are actually fairly intuitive.
+
+# the `measure` argument ("MD") tells the program to calculate a "Mean Difference", which refers to an unstandardized mean difference
+
+# n1i, m1i, and sd1i refer to the sample size (n), mean (m), and standard deviation (sd) of the first group, the group treated with St. John's wort.
+
+# n2i, m2i and sd2i refer to the sample size (n), mean (m), and standard deviation (sd) of the second group, the group treated with a placebo.
+
+# data = SJW.data tells the calculator to use the data in the previous data object we created, which we named "SJW.data"
+
+# digits = 2 tells the calculator to round to 2 decimal points.
+
+SJW.data.umd <- escalc(measure = "MD", n1i = SJW.n, m1i = SJW.m, sd1i = SJW.s, n2i = Placebo.n, m2i = Placebo.m, sd2i = Placebo.s, data = SJW.data, digits = 2)
+
+# Once we have created our SJW.data.umd object, we can take a look at it to see how it differs from the original data we entered.
+
+SJW.data.umd
+
+summary(SJW.data.umd)
+
+# Notice that this new object looks almost identical to the original data stored in the "SJW.data" object, except it contains two new columns at the end (right) of the data frame, labeled yi and vi, which stand for the mean and variance of the effect (change in HAM-D score between the two samples), in raw score units. Also notice that when we use the "summary(SJW.data.umd)" command we get another similar data frame, but with four extra columns added to the end of the data frame. Can you tell what these are?
+
+# Now do the same, but using a "Standardized Mean Difference" (i.e., Cohen's d) instead.
+
+SJW.data.smd <- escalc(measure = "SMD", n1i = SJW.n, m1i = SJW.m, sd1i = SJW.s, n2i = Placebo.n, m2i = Placebo.m, sd2i = Placebo.s, data = SJW.data, digits = 2)
+
+SJW.data.smd
+
+summary(SJW.data.smd)
+```
+
+Looking at both the unstandardized and standardized effect sizes, how similar or different do they appear? Can you understand the mathematical relationship between the two?
+
+Now that we have our effect sizes calculated, the next step in the meta analysis is to pool the effect sizes together, weighting each effect size by the sample size of the original study and by the variance in the original study. This creates a "weighted average" effect size across all nine studies, taking advantage of the larger overall sample size to produce a more precise estimate of the true effect in the population.
+
+Before we proceed, we need to decide whether we should be using - a fixed effects model or a random effects model.
+
+>**Exercise 4. In one paragraph, compare and contrast fixed effects and random effects models for meta analysis. What pieces of information might you need to determine whether fixed or random effects are appropriate for the current meta analysis?**
+
+```{r answer4,eval=TRUE}
+# Fixed effects assume that the effect in the population is equal regardless of the specifics of each study. It is a less conservative approach that gives you greater precision in your effect size estimates, but requires the homogeneity assumption to be met.
+# Random effects assumes that there is additional unexplained variance that causes the effects in the population to differ slightly from one another, and the random effects model attempts to account for this additional heterogeneity. Does not require the homogeneity assumption to be met. More conservative approach, which means that it will not produce confidence intervals that are as precise as those produced by a fixed effects model, but is more flexible because it can be applied in more situations and is also more able to generalize to a larger population.
+# To determine which should be used, consider both the potential sources of heterogeneity (can I assume that the effect is equal in the population for all studies, or is there some variable or variables that cause the effect to be unequal?) and whether or not they can be explained. Also consider the Q statistic, which tests for homogenity. Significant p-values for Q indicate that the homogeneity assumption is not met and suggest a random effects model.
+```
+
+One way to determine whether we should use a fixed effects or random effects model is based on the homogeneity, or lack thereof, of the effect sizes across our nine studies. The $Q$ test for heterogeneity is conducted by default when we run our meta analysis. The $Q$ test has as its $H_0$ an expected difference of 0 between the actual data and hypothetical data that have perfect homogeneity. Therefore, a "significant" $p$-value for the $Q$ statistic indicates a lack of homogeneity in the data we are using. When the homogeneity assumption is not met, it is recommended that a random effects model is used. Regardless of the results of our $Q$ test, we'll go ahead and examine both fixed and random effects models today.
+
+We'll begin with a fixed effects model for the ustandardized effect size and then for the standardized effect size. For now, we'll just focus on whether the homogeneity assumption is met.
+
+```{r Q,eval=TRUE}
+# The first command runs the meta analysis using the "rma()" function. Its arguments include the effect size (yi), the variance of the effect size (vi), the object that is holding our effect sizes that we calculated (SJW.data.umd), the type of model ("FE" for fixed effects), labels we want for our studies (the column labeled "Study" in the SJW.data.umd) file, and the level of our confidence intervals (e.g., 95 for 95%).
+meta.sjw.u.fixed <- rma(yi = yi, vi = vi, data = SJW.data.umd, method = "FE", slab = Study, level = 95)
+
+# Print the results of the fixed effects model for unstandardized effect sizes
+meta.sjw.u.fixed
+
+# Run the fixed effects model for standardized effect sizes
+meta.sjw.s.fixed <- rma(yi = yi, vi = vi, data = SJW.data.smd, method = "FE", slab = Study, level = 95)
+
+# Print the results of the fixed effects model for standardized effect sizes
+meta.sjw.s.fixed
+```
+
+Take a look at the $Q$ statistic and the $p$-value for the two sets of results you just ran. Do they suggest homogenity or heterogeneity across the 9 studies? Based on these results, should we conduct a fixed or random effects model?
+
+You should have obtained significant ($p < .05$) values for the $Q$ statistic for both the unstandardized and standardized mean differences. As such, we should probably choose to go with a random effects model for our meta analysis. That can be accomplished with the following code for the standardized effect sizes.
+
+```{r random,eval=TRUE}
+meta.sjw.s.random <- rma(yi = yi, vi = vi, data = SJW.data.smd, method = "REML", slab = Study, level = 95)
+```
+
+>**Exercise 5. Paste the output of your random effects model for the standardized effect sizes into the Microsoft Word document you will hand in for this assignment. How do the results from the random effects model for standardized effect sizes differ from the fixed effects model for standardized effect sizes?**
+
+```{r answer5,eval=TRUE}
+meta.sjw.s.random
+# The difference between the fixed effects and random effects models using standardized effect sizes is that the random effects model has a slightly lower pooled effect size estimate but much wider 95% confidence intervals - it is less precise (which can also be seen by its much larger standard error).
+```
+
+Let's take a look at the output produced by our meta analysis for the standardized random effects model (`meta.sju.s.random`). This output includes the following:
+
+1. Type of model (Random-Effects), k (number of studies), and the homogeneity estimator (REML = Restricted Maximum Likelihood, which is the default setting in `metafor`).
+2. tau^2 (tau squared), which is an estimate of the total amount of heterogeneity across all 9 studies.
+3. tau (the square root of tau squared), the heterogeneity in standard deviation units.
+4. I^2 (I squared), which is the ratio of total heterogeneity to the total amount of variability across the nine studies.
+5. H^2 (H squared), which is the ratio of the total variability across all studies to the amount of variability attributable to sampling error.
+6. The test for heterogeneity ($Q$ statistic and its $p$-value), which we examined earlier.
+7. The model results, including
+  - The pooled effect size estimate - this is the "weighted average" effect size (Cohen's $d$) across all 9 studies.
+  - The standard error (se) of the pooled effect size estimate.
+  - The $z$-value, which is the estimate divided by its standard error
+  - The $p$-value, which is the area under the normal distribution curve at the level of z (the probability of obtaining the observed results if the true effect size is 0 in the population)
+  - The lower and upper bounds of the confidence intervals for the pooled effect size estimate. This tells us how precisely these nine studies can estimate the true effect in the population.
+  - Asterisks!! :) These tell us the results of the meta analysis, if NHST procedures are applied (see the $p$-value above.)
+
+After we've taken a look at the results of the meta analysis, we can explore the results in additional ways. First, we'll look at what's called a Forest Plot, which is a nice way to visually summarize a meta analysis. We'll continue using the unstandardized random effects model.
+
+```{r forest, eval=FALSE}
+forest(meta.sjw.s.random)
+```
+
+>**Exercise 6. Using the bottom right panel of RStudio, under the "Plots" tab, export your forest plot to the clipboard and paste it into your Microsoft Word document. Examining the forest plot, look at each of the nine individual studies that we included in our meta analysis. Provide an overall summary of these nine studies from a NHST perspective and from an effect size/confidence intervals perspective. Compare and contrast the two perspectives within the context of the 9 studies. [Note: do not interpret the overall meta analysis results in your answer to #6.]**
+
+```{r answer6, eval=TRUE}
+forest(meta.sjw.s.random)
+# Based on NHST, three of these 9 studies would have been found non-significant (p < .05), as their confidence intervals overlapped 0. Three other confidence intervals were so close that they probably would have failed to reject the null with a more conservative alpha level (e.g., .01). Six of the studies would have produced significant results at alpha = .05. The NHST perspective would not have given us information about the magnitude of the effects across each study. The point estimates for effect size and their confidence intervals tells us that, with the exception of the Uebelhack et al. (2004) study and the Schrader et al. (1998) study, each of these studies produced very consistent results, some of which were more precise (e.g., Lecrubier et al. 2002) than others (e.g, Fava et al. 2005).
+```
+
+>**Exercise 7. Look at the very last (bottom) data point in the forest plot, marked by a wide diamond shape, which is labeled as "RE Model." Also take a look at the output from the standardized random effects meta analysis. Based on what you know about meta analysis, effect sizes, confidence intervals, NHST, depression, and the HAM-D, write a 1-paragraph summary of the results of this meta analysis. Explain what the meta analysis adds above and beyond your answer to exercise 6.**
+
+```{r answer7, eval=TRUE}
+# St. John's wort decreased scores on the HAM-D by roughly .6 standard deviation units. Our best guess at the true population of St. John's wort for people with depression is somewhere between a .92 standard deviation reduction on the HAM_D and a .29 standard deviation reduction on the HAM-D. It would be helpful to know the mean and standard deviation of the HAM-D in people with depression to know how meaningful this effect is, but it is almost certainly larger than a "small" effect, to use Cohen's labels, and may be a "large" effect, also based on Cohen's labels. Comparing this to answer 6, by just examining each study individually and using the NHST perspective, we only know that around 2/3 of the studies reached statistical signficance - therefore, there might be some skepticisim as to whether there really is a true effect. But when pooling the effect sizes we can clearly see that the effect is present and we can estimate it with decent precision.
+```
+
+One last piece of information we can explore in our meta analysis is the question of publication bias, or the "file drawer" problem. As you know, a study may be more likely to be unpublished (i.e., put in the "file drawer" rather than in a journal) if the results were not statistically significant. Among other things, the "file drawer" problem has the potential to bias the effect sizes that do end up being published, in the positive direction. In other words, if we knew about all of the unpublished studies out there, instead of just the published ones, we would probably get a smaller effect size measurement if we included these unpublished studies in our meta analysis. To examine the potential effects of publication bias, we can use a funnel plot and calculate a failsafe N.
+
+We'll start with the funnel plot first.
+
+```{r funnel, eval=FALSE}
+funnel(meta.sjw.s.random)
+```
+
+>**Exercise 8. Paste the funnel plot into your Word document. Complete Module 15 (Publication Bias) on the Cochrane Collaboration website (http://www.cochrane-net.org/openlearning/html/mod15.htm) and, based on that information, summarize the data pictured in the funnel plot that you created (make sure to read "Funnel plot presentation.pdf"). What does the funnel plot tell you about publication bias in the 9 studies used to investigate the effectiveness of St. John's wort for treating depression?**
+
+```{r answer8, eval=TRUE}
+funnel(meta.sjw.s.random)
+# There is a lack of symmetry in the funnel plot; only 3 studies produced effect sizes that were more negative than the average effect, whereas 6 studies produced effect sizes that were more positive than the average effect. In addition, one study in particular seems to have a combination of a very large effect and also a large standard error, which suggests that this study could be biasing the results and should be investigated more thoroughly, in terms of design or sampling, to make sure that it is consistent methodologically with the other studies in the meta analysis. In addition, there is one other study that appears to be a "negative" outlier and three studies that appear to be "positive" outliers, where negative indicates a larger decrease in HAM-D scores and positive indicates a smaller decrease in HAM-D scores. Five of the nine studies have produced fairly unexpected findings with regard to their combined effect size and standard error. Therefore, this indicates a potential for publication bias and suggests that if unpublished studies exist, they may differ from the estimated effect we obtained in our analyses.
+
+# However, the funnel plot is not an excellent method for examining publication bias, so no strong conclusions can be made to that effect. It would be important to examine individual differences in each study to determine whether methodological differences can explain these findings.
+```
+
+Finally, we'll calculate a failsafe N for the standardized effect size.
+
+```{r fsn, eval=FALSE}
+fsn(yi, vi, data = SJW.data.smd)
+```
+
+>**Exercise 9. What is the failsafe N for this meta analysis? How do you interpret this in the context of the meta analysis results as a whole?**
+
+```{r answer9,eval=TRUE}
+#The failsafe N for this anaysis is 369. This means that there would need to be 369 additional studies equivalent to those included in the meta analysis, all of which with null findings, to reach the conclusion that St. John's wort has no effect on depression. Because it is unlikely that 369 studies on this topic have been unpublished, chances are low that the true effect is erroneous due to publication bias.
+```
+
+>**Exercise 10. On your own, perform a random effects meta analysis for the unstandardized effect sizes. For this exercise, include your R input, R output, and a forest plot for the unstandardized effect size estimates.**
+
+```{r answer10,eval=TRUE}
+meta.sjw.u.random <- rma(yi = yi, vi = vi, data = SJW.data.umd, method = "REML", slab = Study, level = 95)
+
+meta.sjw.u.random
+
+forest(meta.sjw.u.random)
+```

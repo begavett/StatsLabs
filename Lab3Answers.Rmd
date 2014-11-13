@@ -1,0 +1,121 @@
+---
+output: pdf_document
+---
+
+PSY 5810: Lab 3 - Consolidating R Knowledge
+========================================================
+
+*Complete the tasks embedded in this lab, paste relevant output into a Word document, and turn the completed assignment in to Natalie by next Wednesday at 9:00 am.*
+
+In this lab, you will take a self-guided tour through an `R` tutorial that will help build upon the previous labs. At the end of the tutorial, you will answer 10 questions to help you integrate what you have learned.
+
+The tutorial that we will be using is known as "swirl" (statistics with interactive `R` learning). It is available as a package from within `R`. To install the package, use the command below.
+
+`install.packages("swirl", dependencies = TRUE)`
+
+Once the package has installed successfully, it should be loaded:
+
+`library(swirl)`
+
+After loading, we will install the course content:
+
+`install_course_url("https://github.com/swirldev/swirl_courses/archive/master.zip", multi = TRUE)`
+
+And finally, to run the tutorial, type
+
+`swirl()`
+
+The tutorial will ask your name, guide you through a few steps, and provide you with some preliminary information. 
+
+At the next prompt, you should see 8 different course options. If you do not see all 8 options, please raise your hand.
+
+For this lab, you will be working with Options 5 (R Programming) and 1 (Data Analysis). You should start with Option 5 (R Programming) and complete Lessons 1, 2, 3, 4, 5, 6, and 9. Be sure that you don't use the "Alt" version of R Programming (Option 6).
+
+After completing Option 5 (R Programming), continue to Option 1 (Data Analysis) and complete all three Lessons (Central Tendency, Dispersion, and Data Visualization) within that topic.
+
+As you proceed through the Lessons, please raise your hand if you have any questions or run into any problems. At times, you may be prompted to watch a video on a particular topic. Watching the videos is optional, not required (and who knows if the lab computers will even play them?!). If you do watch videos, please be mindful of your classmates and keep the volume low.
+
+After you have completed all 10 lessons, please answer the following questions:
+
+>**Question 1. What code should you use to add a vector of seven threes to a vector of integers 1 through 7 and store the results in a variable named `q1`?**
+
+> Answer: `c(rep(3, 7)) + 1:7` or variations of this.
+
+```{r l3a1, echo=FALSE}
+c(rep(3, 7)) + 1:7
+```
+
+>**Question 2. Imagine you have a data variable measuring your participants' scores on a depression inventory. There are 40 participants in your sample. The first 20 cases in your variable are men and the second 20 cases are women. If you wanted to create another variable, called `sex`, that stores the sex (`M` or `F`) of each participant, what is the most efficient way of creating this variable?**
+
+> Answer: `sex <- rep(c("M", "F"), each = 20)`
+
+```{r l3a2, echo=FALSE}
+rep(c("M", "F"), each = 20)
+```
+
+>**Question 3. Assume that you have a data frame called `my_data` that contains three objects: `Sex`, `Age`, and `Nationality`. You want to create a new variable called `new_data` that filters out (excludes) men over the age of 65 who are not from France. `Sex` is coded as `"Male"` and `"Female"`, `Age` is coded as a numeric variable, and a French `Nationality` is coded as `"French"`. What is the most efficient code you can use to perform this task?**
+
+```{r l2data, tidy=TRUE, tidy.opts=list(width = 80)}
+set.seed(5810) #this makes the random number generator below (rnorm) reproducable, 
+# so we get the same "random" results
+my_data <- data.frame(Sex = rep(c("Male", "Female"), 20), Age = rnorm(40, 65, 10), Nationality = rep(c("Other", "French"), each = 20))
+my_data
+new_data <- my_data[!(my_data$Sex == "Male" & my_data$Age > 65 & my_data$Nationality != "French"), ]
+
+new_data
+```
+
+> Answer: `new_data <- my_data[!(my_data$Sex == "Male" & my_data$Age > 65 & my_data$Nationality != "French"), ]`
+
+> Or `new_data <- subset(my_data, subset = !(my_data$Sex == "Male" & my_data$Age > 65 & my_data$Nationality != "French"))`
+
+>**Question 4. You have a data frame called `DataFrame` that contains the variable `Happiness`. There are 450 rows of data in your data frame, and 50 of those in the `Happiness` column are missing data points (`NA`). What is the most efficient code you can use to create a new data frame called `CompleteData` that excludes people with missing data (`NA`) on the `Happiness` variable?**
+
+> Answer: `CompleteData <- DataFrame[!is.na(DataFrame$Happiness), ]`
+
+>**Question 5. What is the most efficient code to create a new data frame called `Random3` in which the first column contains 30 random numbers from $N(\mu = 0, \sigma = 1)$, the second column contains 30 random numbers from $N(\mu = 10, \sigma = 3)$, and the third column contains 30 random numbers fron $N(\mu = 50, \sigma = 10)$, with the three columns labeled `Hydrogen`, `Helium`, and `Lithium`?**
+
+> Answer: `Random3 <- data.frame(Hydrogen = rnorm(30, 0, 1), Helium = rnorm(30, 10, 3), Lithium = rnorm(30, 50, 10))` (the data will differ for each student)
+
+```{r l3a5, echo=FALSE}
+data.frame(Hydrogen = rnorm(30, 0, 1), Helium = rnorm(30, 10, 3), Lithium = rnorm(30, 50, 10))
+```
+
+>**Question 6. How would you change the names of the variables in the `Random3` data frame to `Barley`, `Hops`, and `Yeast`?**
+
+> Answer: `names(Random3) <- c("Barley", "Hops", "Yeast")`
+
+>**Question 7. What code should you use if you wanted to generate boxplots for the `Barley`, `Hops`, and `Yeast` variables, presented together in one figure? Submit a copy of the boxplot with your code (in the RStudio plot window, click "Export" and "Copy to Clipboard..." to paste the figure in Word.**
+
+> Answer: `boxplot(Random3)`
+> (the data in the plots will look slightly different for each student)
+
+```{r l3a7, echo=FALSE}
+Random3 <- data.frame(Barley = rnorm(30, 0, 1), Hops = rnorm(30, 10, 3), Yeast = rnorm(30, 50, 10))
+boxplot(Random3)
+```
+
+>**Question 8. Using the `plot` function, plot the data from `Barley` on the x-axis and the data from `Yeast` on the y-axis. Draw a custom y-axis to include values ranging from 0 to 80. Draw a red dashed horizontal line to indicate the mean of the `Hops` variable. Show your code and include a copy of your plot in the assignment you turn in. You may want to look at the help files for `plot`, `par`, and `abline` for assistance answering this question.**
+
+> Answer: 
+> `plot(Random3$Barley, Random3$Yeast, ylim = c(0,80))`
+> `abline(h = mean(Random3$Hops), lty = 2, col = "red")`
+> (the data in the plots will look slightly different for each student)
+
+```{r l3q8, echo=FALSE}
+plot(Random3$Barley, Random3$Yeast, ylim = c(0,80))
+abline(h = mean(Random3$Hops), lty = 2, col = "red")
+```
+
+>**Question 9. Provide the code to draw a histogram of the `Barley` variable. Label the x-axis as `"Barley"` and set the plot title to `"Histogram of Barley"`. Provide a copy of your histogram with your assignment.**
+
+> Answer: `hist(Random3$Barley)`
+> (the data in the plots will look slightly different for each student)
+
+```{r l3q9, echo=FALSE}
+hist(Random3$Barley, xlab = "Barley", main = "Histogram of Barley")
+```
+
+>**Question 10. What is the function that can be used to calculate the interquartile range of a variable? What package does it belong to?**
+
+> Answer: `IQR()` from the *stats* package.

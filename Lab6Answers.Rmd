@@ -1,0 +1,483 @@
+---
+output: pdf_document
+---
+
+PSY 5810: Lab 6 - The $t$-test
+========================================================
+
+Assignment: complete the lab tasks as described below. As you work through the lab, you will find 10 exercises embedded within the statistical procedures that you perform. Some tasks require you to write results using APA format (6th Edition). If you do not have a copy of the APA Publication Manual, there are many internet resources available (such as http://www.allenandunwin.com/spss/Files/APAStyle.pdf). Perform all analyses in R, and submit your input code and output only when specifically requested. Combine your R code with your written answers into a Microsoft Word document, and email this as a single file to Natalie (ngordon3@uccs.edu) or print out the document and leave it in Natalie's mailbox before the start of next week's lab. Be sure your full name is in the file or included on the printout.
+
+```{r lab5opts, echo=FALSE}
+library(knitr)
+opts_chunk$set(eval = TRUE, tidy=TRUE, tidy.opts=list(width.cutoff=70))
+```
+
+In this lab, we investigate three methods for conducting a $t$-test. These are:
+
+1. One sample $t$-test
+
+2. Independent samples $t$-test
+
+3. Paired samples $t$-test
+
+We will also investigate the assumptions that are used when conducting the $t$ test. These are
+
+1. Independence (when using the independent samples $t$-test)
+
+2. Homogeneity of variance (when using the independent samples $t$-test)
+
+3. Normality of the distribution in the population
+
+Finally, we will examine the effects of performing a $t$-test with equal and unequal sample sizes.
+
+We will use the HRS data to perform null hypothesis significance testing with the $t$-test.
+
+```{r load,highlight=TRUE}
+load(url("http://www.uccs.edu/Documents/bgavett/HRS_Data.RData"))
+```
+
+<b><u>Part I. Independent Samples $t$-test</u></b>
+
+We will begin by exploring the independent samples $t$-test, which is used to test the hypothesis that two populations differ on some dependent variable. For example, we will use the independent samples $t$-test to determine whether people who have been diagnosed with Alzheimer's disease differ from those without Alzheimer's disease in terms of their age.
+
+To start, we will generate a smaller subset of the `hrs.cog` data to use for our analyses.
+
+```{r organize,results='markup'}
+
+# This creates a subset of the hrs.cog data that includes only those with AD (coded as 1)
+# and without AD (coded as 5) and asks for only two columns in the new data frame: age
+# (MA019) and AD status (MC272)
+AD.age <- subset(hrs.cog, hrs.cog$MC272 == 1 | hrs.cog$MC272 == 5, select=c(MA019,MC272)) 
+
+# This changes the names of the two variables in the AD.age object to more meaningful
+# names.
+names(AD.age) <- c("Age", "AD") 
+
+# Converts the AD variable into a factor (nominal variable) and assigns the labels "AD"
+# and "NoAD" to values 1 and 5, respectively.
+AD.age$AD <- factor(AD.age$AD, levels = c(1,5), labels = c("AD", "NoAD")) 
+
+# Inspect the structure of the data to verify it is organized as we intended.
+str(AD.age) 
+```
+
+To perform our first independent samples $t$-test, we will assume that the `hrs.cog` data represents an entire population and we will randomly sample from this population. To determine the appropriate sample size, we need to perform a power analysis. Let's assume that people with AD are, on average, .5 standard deviation units older than people without AD ($d = 0.5$). We will also seek statistical power ($1-\beta$) of .90, which gives us a 10% chance of a Type II error. We will set our $\alpha$ level to .05.
+
+```{r power.istt,results='markup',error=FALSE,warning=FALSE}
+library(pwr)
+
+pwr.t.test(n = NULL, d = 0.5, sig.level = .05, power = .9, type = "two.sample", alternative = "two.sided")
+```
+
+Based on this power analysis,
+
+  - $n_{AD} = `r library(pwr); n1 <- ceiling(pwr.t.test(n = NULL, d = 0.5, sig.level = .05, power = .9, type = "two.sample", alternative = "two.sided")$n); n1`$
+  - $n_{NoAD} = `r n1`$
+  - $N = `r N <- n1+n1; N`$
+  - $df = `r df <- N-2; df`$
+
+Next, we'll randomly sample $`r n1`$ participants from the AD sample and the same number of participants from the NoAD sample.
+
+```{r organize2,results='markup'}
+# This randomly samples 86 people from the AD group
+AD.sample <- AD.age[sample(rownames(AD.age[AD.age$AD == "AD", ]), size = 86, replace = FALSE),] 
+
+# This randomly samples 86 people from the NoAD group
+NoAD.sample <- AD.age[sample(rownames(AD.age[AD.age$AD == "NoAD", ]), size = 86, replace = FALSE),] 
+
+# This combines the two samples into one data frame
+AD.data <- rbind(rbind(AD.sample, NoAD.sample))
+```
+
+Now that we have our two samples, we should check some of the assumptions of the independent samples $t$-test before proceeding.
+
+<u>Assumption 1: Independence</u>. In theory, the two samples should be statistically independent because they were randomly selected from a population in which the two groups are thought to be independent. We can measure the degree of independence (or lack thereof) by examining the covariance between the groups' age.
+
+```{r cov,results='markup'}
+cov(x = AD.data$Age[AD.data$AD == "AD"], y = AD.data$Age[AD.data$AD == "NoAD"])
+```
+
+Given that we are dealing with large numbers for Age, this degree of covariance should be relatively small (close to 0). Thus, we should be confident that we are meeting the assumption of group independence.
+
+<u>Assumption 2: Homogeneity of Variance</u>. There may be good reason to suspect that the variance in Age in the AD population is different than the variance in Age in the population without AD. After all, having AD is associated with increased mortality (all else equal, people with AD might be expected to live shorter lives than people without AD). Therefore, we need to check the assumption of homogeneity of variance before performing the independent samples $t$-test. There are a few ways of checking this assumption.
+
+```{r levene,results='markup',error=FALSE,message=FALSE,warning=FALSE,fig.keep='high'}
+
+# First, let's just examine the two variances.
+
+# AD Group sample variance and sample standard deviation
+var(AD.data$Age[AD.data$AD == "AD"])
+sd(AD.data$Age[AD.data$AD == "AD"])
+
+# NoAD Group sample variance and sample standard deviation
+var(AD.data$Age[AD.data$AD == "NoAD"])
+sd(AD.data$Age[AD.data$AD == "NoAD"])
+
+# Do they look similar? Perhaps a visual examination would be more helpful.
+
+# install.packages("HH", dependencies = TRUE)
+library(HH)
+
+# Plot a homogeneity of variance plot
+hovPlot(AD.data$Age ~ AD.data$AD)
+# What is your interpretation of the homogeneity of variance plot?
+
+# Now, we'll conduct formal tests of the two samples' homogeneity to try to make
+# inferences about the population variance
+
+# Perform the Bartlett test of homogeneity of variances
+bartlett.test(AD.data$Age ~ AD.data$AD)
+
+# Installs the 'lawstat' package, which contains the function to conduct Levene's Test 
+# of Equality of Variances (remove comment from beginning to execute)
+# install.packages("lawstat", dependencies = TRUE) 
+
+# Loads the 'lawstat' package
+library(lawstat) 
+
+# This is the Levene test using the default parameters (see ?levene.test 
+# for other options), which is technically the robust Brown-Forsythe 
+# Levene-type test that uses group medians.
+levene.test(AD.data$Age, AD.data$AD) 
+
+# Adding the 'location = "mean" ' argument replaces group medians with means to correspond 
+# to the original Levene test.
+levene.test(AD.data$Age, AD.data$AD, location = "mean") 
+
+# Adding the 'kruskal.test = TRUE' argument performs a Kruskal-Wallace test.
+levene.test(AD.data$Age, AD.data$AD, kruskal.test = TRUE)  
+```
+
+Unless you know what you are doing, your best bet is probably to use the default settings for `levene.test` to check the homogenity of variance assumption. All of these statistics test the data against the null hypothesis that $\sigma^2_1 - \sigma^2_2 = 0$, so $p$-values of $< .05$ indicate that the homogeneity of variance assumption is not met.
+
+Some of you probably found a $p$ value of $> .05$ for the Brown-Forsythe-Levene-type test of homogeneity of variance, while others may have found a $p$ value of $< .05$. For the purposes of this lab, let's proceed under the assumption that there is homogeneity of variance. Our last assumption check will be that the data are normally distributed in the population. We can examine the normality of our data using histograms, boxplots, and the Q-Q plot, and we can also perform a statistical test to evaluate the degree of deviation from normality.
+
+```{r normality,results='markup',error=FALSE,message=FALSE,warning=FALSE,fig.keep='high'}
+
+# Histogram for Age across both samples
+hist(AD.data$Age)
+
+# Boxplots for Age
+boxplot(AD.data$Age)
+boxplot(AD.data$Age ~ AD.data$AD)
+
+# Normal Q-Q plot for Age across both samples
+qqnorm(AD.data$Age)
+
+# Draw a reference line for the theoretical normal distribution
+qqline(AD.data$Age)
+
+# Conduct a Shapiro-Wilk test of normality
+shapiro.test(AD.data$Age)
+
+# More tests of normality can be found in the 'nortest' package
+
+# install.packages("nortest", dependencies = TRUE)
+
+library(nortest)
+
+# Conduct the Lilliefors (Kolmogorov-Smirnov) test for normality.
+# The null hypothesis is that the difference between the empirical data and the 
+# theoretical normal distribution is 0.
+# p-values of < .05 indicate deviations from normality
+lillie.test(AD.data$Age)
+```
+
+From these results, most of you are likely to have found that the normality assumption has been violated. We will proceed with the independent samples $t$ test despite the violation of this assumption. Then, we'll examine other procedures for dealing with this violation.
+
+```{r istt,results='markup',error=FALSE,message=FALSE,warning=FALSE,fig.keep='high'}
+t.test(AD.data$Age[AD.data$AD == "AD"], AD.data$Age[AD.data$AD == "NoAD"], alternative = "two.sided", mu = 0, paired = FALSE, var.equal = TRUE, conf.level = .95)
+```
+
+```{r istt_sav,results='markup',error=FALSE,message=FALSE,warning=FALSE,fig.keep='high', echo=FALSE}
+t1 <- t.test(AD.data$Age[AD.data$AD == "AD"], AD.data$Age[AD.data$AD == "NoAD"], alternative = "two.sided", mu = 0, paired = FALSE, var.equal = TRUE, conf.level = .95)
+```
+
+>Exercise 1. Write a summary of the results of this independent samples $t$-test using APA
+>format for reporting results. Be sure to include the t statistic, degrees of freedom, 
+>p-value, 95% confidence interval, and sample means.
+
+>**Answer: There are many ways to write the summary correctly. One example is: The results of the independent samples $t$-test indicate that the AD group ($M = `r round(mean(AD.data$Age[AD.data$AD == "AD"]),2)`$, $SD = `r round(sd(AD.data$Age[AD.data$AD == "AD"]),2)`$) is `r round(t1$estimate[1] - t1$estimate[2],2)` (95% CI [`r paste(round(t1$conf.int[1],2), round(t1$conf.int[2],2), sep = ", ")`]) years older than the group without AD ($M = `r round(mean(AD.data$Age[AD.data$AD == "NoAD"]),2)`$, $SD = `r round(sd(AD.data$Age[AD.data$AD == "NoAD"]),2)`$), $t (`r t1$parameter`) = `r round(t1$statistic, 2)`$, $p < .05$**.
+
+Unfortunately, because we violated the assumption of normality, our test results may be biased. 
+
+>Exercise 2. Review Chapter 5 in the $Field$ text and explain, in your own words, the 
+>possible consequences of violating this normality assumption.
+
+>**Answer: Answers are acceptible if they discuss inflation of Type I error.**
+
+When the assumption of normality is violated, we have four options for handling the analyses:
+
+1. If the deviation from normality is relatively small, then assume that the $t$-test is robust to such violations and conduct the test anyway.
+  - We have essentially done this in conducting our $t$-test above
+
+2. If the deviation from normality is pronounced, attempt to transform the data to make it more Gaussian. Then run the $t$-test.
+  - Transformations (from most to least conservative) are:
+    - Square root
+    - Logarithmic
+    - Inverse (reciprocal)
+
+3. If the deviation from normality is the result of one or more outliers (extreme scores), remove the outliers and run the $t$-test.
+
+4. If the deviation from normality is pronounced, use a nonparametric test that does not assume normality.
+  - The alternative to the independent sample $t$-test is the Mann-Whitney $U$ test (also called the Wilcoxon rank sum test).
+
+For this exercise, let's explore the outcome of option 2 above: transforming the data.
+
+```{r transform,results='markup',error=FALSE,message=FALSE,warning=FALSE,fig.keep='high'}
+
+# Create a variable for untransformed age
+Age.un.t <- AD.data$Age
+
+# Conduct a square root transformation
+Age.sqrt.t <- sqrt(Age.un.t)
+
+# Conduct a logarithmic transformation
+Age.log.t <- log(Age.un.t)
+
+# Conduct an inverse transformation
+Age.inv.t <- 1/Age.un.t
+
+# Now plot each of these transformations to see whether they decrease the deviation
+# from normality
+
+# Untransformed Q-Q Plot
+qqnorm(Age.un.t)
+qqline(Age.un.t)
+
+# Square Root Transformed Q-Q Plot
+qqnorm(Age.sqrt.t)
+qqline(Age.sqrt.t)
+
+# Logarithmic Transformed Q-Q Plot
+qqnorm(Age.log.t)
+qqline(Age.log.t)
+
+# Inverse Transformed Q-Q Plot
+qqnorm(Age.inv.t)
+qqline(Age.inv.t)
+```
+
+>Exercise 3. Summarize the results of each of these transformations on the deviation from
+>normality in the data, based on your visual inspection of the Normal Q-Q plots. 
+>Is any one transformation clearly superior to the others?
+
+>**Answer: Transformations do not appear to make much of a difference.**
+
+If we are not confident that our violation of the normality assumption can be corrected, our alternative is to conduct a nonparametric test. Here, we will use the Mann-Whitney $U$ test, which essentially performs a $t$-test on the $ranked$ data, rather than the raw scores.
+
+```{r MWU,results='markup',error=FALSE,message=FALSE,warning=FALSE,fig.keep='high'}
+wilcox.test(AD.data$Age[AD.data$AD == "AD"], AD.data$Age[AD.data$AD == "NoAD"], alternative = "two.sided", mu = 0, paired = FALSE, conf.int = TRUE, conf.level = .95)
+```
+
+>Exercise 4. How do the results of the Mann-Whitney $U$ test (Wilcoxon rank sum test)
+>differ from the results of the independent samples $t$-test, above? 
+>How are they alike?
+
+>**Answer: Answers will depend on each student's random sample.**
+
+In the example above, we found that our data met the homogeneity of variance assumption. Now, we'll explore a situation in which that assumption is not met. From the `hrs.cog` data, we'll choose another variable to check for homogeneity of variance in the population: number of cigarettes smoked per day in women vs. men. At the same time, we'll also work with groups of unequal sample sizes.
+
+```{r organize_smok,results='markup'}
+
+# This creates a subset of the hrs.cog data that includes men (coded as "Male")
+# and women (coded as "Female") and asks for two columns in the new data frame: 
+# sex (MX060_R) and self-reported cigarettes smoked per day (MC118). The data are stored
+# in a new data frame called `sex.smok`
+sex.smok <- subset(hrs.cog, select = c(MX060_R, MC118)) 
+
+# This changes the names of the two variables in the sex.smok object to more meaningful
+# names.
+names(sex.smok) <- c("sex", "n.cigs") 
+
+# Now we'll remove people with missing data for cigarettes smoked.
+sex.smok <- subset(sex.smok, !is.na(sex.smok$n.cigs))
+
+# Inspect the structure of the data to verify it is organized as we intended.
+str(sex.smok) 
+```
+
+Now, let's explore the homogeneity of variance assumption in the same way we did above for the Alzheimer's disease and age data.
+
+```{r levene2,results='markup',error=FALSE,message=FALSE,warning=FALSE,fig.keep='high'}
+
+# First, let's just examine the two variances.
+
+# Female Group sample variance and sample standard deviation
+var(sex.smok$n.cigs[sex.smok$sex == "Female"])
+sd(sex.smok$n.cigs[sex.smok$sex == "Female"])
+
+# Male Group sample variance and sample standard deviation
+var(sex.smok$n.cigs[sex.smok$sex == "Male"])
+sd(sex.smok$n.cigs[sex.smok$sex == "Male"])
+
+# Do they look similar? Perhaps a visual examination would be more helpful.
+
+# install.packages("HH", dependencies = TRUE)
+
+# library(HH)
+
+# Plot a homogeneity of variance plot
+hovPlot(sex.smok$n.cigs ~ sex.smok$sex)
+# What is your interpretation of the homogeneity of variance plot?
+
+# Now, we'll conduct formal tests of the two samples' homogeneity to try to make
+# inferences about the population variance
+
+# Perform the Bartlett test of homogeneity of variances
+bartlett.test(sex.smok$n.cigs ~ sex.smok$sex)
+
+# Installs the 'lawstat' package, which contains the function to conduct Levene's Test 
+# of Equality of Variances (remove comment from beginning to execute)
+# install.packages("lawstat", dependencies = TRUE) 
+
+# Loads the 'lawstat' package
+# library(lawstat) 
+
+# This is the Levene test using the default parameters (see ?levene.test 
+# for other options), which is technically the robust Brown-Forsythe 
+# Levene-type test that uses group medians.
+levene.test(sex.smok$n.cigs, sex.smok$sex) 
+
+# Adding the 'location = "mean" ' argument replaces group medians with means to correspond 
+# to the original Levene test.
+levene.test(sex.smok$n.cigs, sex.smok$sex, location = "mean") 
+
+# Adding the 'kruskal.test = TRUE' argument performs a Kruskal-Wallace test.
+levene.test(sex.smok$n.cigs, sex.smok$sex, kruskal.test = TRUE)  
+```
+
+It appears as though the smoking data do not meet the homogenity of variance assumption when grouped by sex.
+
+>Exercise 5. Review Chapter 5 in the $Field$ text and explain, in your own words, the 
+>possible consequences of violating the homogeneity of variance assumption.
+
+>**Answer: Answers are acceptible if they discuss inflation of Type I error.**
+
+We will now proceed to conduct an independent samples $t$-test of the smoking data grouped by sex. But first, we will check to see whether our sample sizes differ, and by how much.
+
+```{r s.size,results='markup',error=FALSE,message=FALSE,warning=FALSE,fig.keep='high'}
+
+# Frequency Table
+table(sex.smok$sex)
+
+# Table of proportions
+table(sex.smok$sex) / sum(table(sex.smok$sex))
+```
+
+We see that the two groups differ by a sizeable amount. Because we lack homogeneity of variance and because we have unequal sample sizes, we must use Welch's $t$ test. Keep in mind that Welch's $t$ test also assumes that the data are normally distributed. Because cigarettes smoked per day is not likely to be distributed normally, we would not use Welch's $t$ test if this were being done for rigorous scientific purposes. We are simply illustrating its application here for didactic purposes.
+
+```{r Welch,results='markup',error=FALSE,message=FALSE,warning=FALSE,fig.keep='high'}
+t.test(sex.smok$n.cigs[sex.smok$sex == "Male"], sex.smok$n.cigs[sex.smok$sex == "Female"], alternative = "two.sided", mu = 0, paired = FALSE, var.equal = FALSE, conf.level = .95)
+```
+
+>Exercise 6. Write a summary of the results of this Welch's independent samples $t$-test 
+>using APA format for reporting results. Be sure to include the t statistic, degrees 
+>of freedom, p-value, 95% confidence interval, and sample means.
+
+>**Answer: See answer to Exercise 1 for generic form of the correct answer.**
+
+>Exercise 7. Replicate the analyses for this Welch's independent samples $t$-test for 
+>sex differences in smoking habits using an appropriate nonparametric test. 
+>Paste your code and the output into the final Word document that you submit.
+
+```{r Lab6E7,results='markup',error=FALSE,message=FALSE,warning=FALSE,fig.keep='high'}
+wilcox.test(sex.smok$n.cigs[sex.smok$sex == "Male"], sex.smok$n.cigs[sex.smok$sex == "Female"], alternative = "two.sided", mu = 0, paired = FALSE, conf.int = TRUE, conf.level = .95)
+```
+
+<b><u>Part II. Paired Samples $t$-test</u></b>
+
+One way of conducting a paired-samples $t$-test is to match participants on a relevant variable, as a method for controlling for that variable's influence. For instance, we may be interested in testing the hypothesis that cognitive functioning differs based on whether or not someone has kidney disfunction secondary to diabetes. However, kidney dysfunction secondary to diabetes might also be expected to vary as a function of age; therefore, if we match our two samples based on age, we have instituted a methodological control for the influence of age on cognition, allowing us to better isolate the effects of kidney disease due to diabetes.
+
+With that said, let's prepare our data.
+
+```{r organize_kidney,message=FALSE,results='markup',fig.keep='high'}
+
+# This creates a subset of the hrs.cog data that includes those with kidney disease
+# secondary to diabetes (coded as "Yes") and those without disease (coded as "No")
+# and asks for three columns in the new data frame: kidney disease secondary to diabetes
+# (MC017), age (MA019), and a measure of cognitive functioning (MD170). The data are 
+# stored in a new data frame called `kidney`.
+kidney <- subset(hrs.cog, select = c(MC017, MA019, MD170)) 
+
+# This changes the names of the three variables in the kidney object to more meaningful
+# names. The Cognitive outcome measure is the Telephone Interview of Cognitive Status (TICS)
+names(kidney) <- c("disease", "age", "TICS") 
+
+# Now we'll remove people with missing data for any of our three variables.
+kidney <- kidney[complete.cases(kidney), ]
+
+# Finally, we need to create two samples matched on age
+# install.packages("Matching", dependencies = TRUE)
+library(Matching)
+
+kidney$Tr <- kidney$disease == "Yes"
+k.match <- Match(Y = kidney$TICS, Tr=kidney$Tr, X = kidney$age, replace = FALSE)
+kd.pos <- kidney[k.match$index.treated,]
+kd.neg <- kidney[k.match$index.control,]
+k.matched <- rbind(kd.pos, kd.neg)
+k.matched <- k.matched[,-4]
+
+# Check to verify that our matching created two groups matched on age.
+boxplot(k.matched$age ~ k.matched$disease)
+summary(k.matched$age[k.matched$disease == "Yes"])
+summary(k.matched$age[k.matched$disease == "No"])
+
+# Inspect the structure of the data to verify it is organized as we intended.
+str(k.matched)
+```
+
+Soon, we will conduct our paired samples $t$-test with the matched data. But first, let's explore the data so we have a more complete picture of what we're working with. The `psych` package has excellent data summary tools.
+
+```{r psych,message=FALSE,results='markup',fig.keep='high'}
+# Install the psych package, if necessary
+# install.packages("psych", dependencies = TRUE)
+
+library(psych)
+
+# Summarize the TICS data by group
+describeBy(k.matched$TICS, group = k.matched$disease)
+```
+
+Take note of the similarities and differences in cognitive ability between the groups with and without kidney disease secondary to diabetes. Do you predict a significant difference in TICS score based on these summary data?
+
+```{r pstt,results='markup'}
+t.test(k.matched$TICS[k.matched$disease == "Yes"], k.matched$TICS[k.matched$disease == "No"], paired = TRUE, mu = 0, var.equal = TRUE, alternative = "two.sided", conf.level = .95)
+```
+
+>Exercise 8. Write a summary of the results of this paired samples $t$-test 
+>using APA format for reporting results. Be sure to include the t statistic, degrees 
+>of freedom, p-value, 95% confidence interval, and sample means.
+
+>**Answer: See answer to Exercise 1 for generic form of the correct answer.**
+
+<b><u>Part III. One Sample $t$-test</u></b>
+
+Lastly, we'll work with a one-sample $t$-test. The remainder of the lab will assist you with organizing your data correctly so that you can perform the one-sample $t$-test on your own.
+
+The question: You read on the internet somewhere that the average resting pulse rate is 75 beats per minute. You wonder if people who have high blood pressure have a resting pulse rate that differs from 75. We will generate a data set with the pulse rate values taken from people with high blood pressure. 
+
+```{r one_sample,results='markup'}
+pulse.htn <- subset(hrs.cog, hrs.cog$MC005 == "Yes", select = c(MI861)) 
+pulse.htn <- pulse.htn[complete.cases(pulse.htn),]
+```
+
+Your job is to conduct a one-sample $t$-test with the `pulse.htn` data.
+
+>Exercise 9. Perform a one-sample $t$-test to evaluate the null hypothesis that 
+>people with hypertension have an average resting pulse rate of 75 beats per minute. 
+>Copy your code and output into the final Word document that you submit. 
+
+```{r one_sample_t,echo=TRUE,results='markup',fig.keep='high'}
+qqnorm(pulse.htn)
+qqline(pulse.htn)
+shapiro.test(AD.data$Age)
+lillie.test(AD.data$Age)
+t.test(pulse.htn, alternative = "two.sided", mu = 75, paired=FALSE, conf.level=.95)
+```
+
+>Exercise 10. Write a summary of the results of this one-sample $t$-test 
+>using APA format for reporting results. Be sure to include the t statistic, degrees 
+>of freedom, p-value, 95% confidence interval, and sample means.
+
+>**Answer: See answer to Exercise 1 for generic form of the correct answer.**

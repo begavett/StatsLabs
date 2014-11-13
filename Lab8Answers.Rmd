@@ -1,0 +1,342 @@
+---
+output: pdf_document
+---
+PSY 5810: Lab 8 - Correlation and Simple Regression
+========================================================
+
+Assignment: complete the lab tasks as described below. As you work through the lab, you will find 10 exercises embedded within the statistical procedures that you perform. Perform all analyses in R and submit your input code and output only when specifically requested. Combine your R code with your written answers into a Microsoft Word document, and email this as a single file to Natalie (ngordon3@uccs.edu) by next Wednesday's lab. Be sure your full name is in the file or included on the printout.
+
+---
+
+# Correlation
+
+To begin this lab, you will be collecting (and providing) original data. On the course website (http://bit.ly/PSY5810), you will find two files: a pdf file titled "Epworth Sleepiness Scale.pdf" and an Excel spreadsheet titled "Lab8Data.xlsx." Each of you should provide answers to the Epworth Sleepiness Scale and obtain a total score (possible scores range from 0 to 24, where higher scores indicate more sleepiness). Write your total score on the whiteboard, along with three other variables: An estimate of the average number of hours per night you have slept during this semester; an estimate of the average number of hours per day you have spent working (classes, studying, employment, etc.) this semester; and an estimate of the average ounces of caffeinated beverages you drink per day.
+
+**Please note: If you are uncomfortable providing personal information such as this, you may opt out or you may provide fake data.**
+
+After everyone has provided their answers on the whiteboard, you should enter the data into the Excel spreadsheet, which already has column headers in place. Once all of the data have been entered, save your Excel spreadsheet as a .csv file by clicking `File -> Save As...` and choosing the .csv file format from the drop-down menu. After you save the .csv file, import it as a data frame into RStudio.
+
+```{r lab8opts, echo=FALSE}
+library(knitr)
+opts_chunk$set(eval = TRUE, tidy=TRUE, tidy.opts=list(width.cutoff=60))
+```
+
+```{r load, echo=FALSE}
+Lab8Data <- data.frame(read.csv("Lab8Data.csv", header = TRUE))
+```
+
+If the data were loaded successfully, you should have simply seen a copy of your command printed to the console, with no error messages, and you should also see `Lab8Data` listed in your R Environment (top right window of RStudio). 
+
+Let's explore our data in several different ways. First, we'll just examine the raw data with the following command.
+
+```{r look}
+Lab8Data
+```
+
+Next, we'll create a summary of our data.
+
+```{r summary}
+summary(Lab8Data)
+```
+
+And to create a more detailed summary, we can load the `psych` package.
+
+```{r psych}
+library(psych)
+describe(Lab8Data)
+```
+
+Next, we'll visualize our data using several plots. The first plot will provide a series of scatterplots, known as a scatterplot matrix, which will allow us to investigate the relationships between the variables.
+
+```{r pairs}
+#install.packages("car", dep = T)
+library(car)
+scatterplotMatrix(~ESS + Sleep + Work + Caffeine, data=Lab8Data, main = "Scatterplot Matrix for Sleep Data", smoother=FALSE, diagonal = "histogram")
+```
+
+Take some time to examine this scatterplot matrix. You may need to adjust the size of your windows and/or click the "Zoom" button above the plot to visualize it fully. At first, the plot might seem overwhelming, but spend some time studying the plot until you have a good sense for its organization.
+
+One thing you may have noticed in this scatterplot matrix is that each bivariate relationship was fit with a line showing the degree of association between two variables. As you know, the slope of this line is related to the correlation coefficient you might obtain between two variables. To examine these correlation coefficients for all pairs of variables, we can use the following command.
+
+```{r corr}
+cor(Lab8Data)
+```
+
+>**Exercise 1. Examine these correlation coefficients and answer the following questions. A) why are there 1s along the diagonal? B) Which two variables have the strongest correlation, and what is the correlation coefficient? C) Which two variables have the weakest correlation, and what is the correlation coefficient?**
+
+>Answer: A) The 1s in the diagnonal represent a variable's correlation with itself; B) Sleep & Work (.5187); C) Work & Caffeine (.07228).
+
+Another excellent way to visualize bivariate relationships is to use a correlation plot (correlogram or corrgram). Essentially, the corrgram takes the matrix of correlations we were just working with and converts the numbers into images. We will apply some specific arguments to describe our data using both visual and text information.
+
+```{r cor_plot}
+#install.packages("corrgram", dep=T)
+library(corrgram)
+corrgram(Lab8Data, lower.panel="panel.conf", diag.panel = "panel.density")
+```
+
+One feature of this corrgram that I'm sure you appreciate is the fact that it provided you with a point estimate (Pearson's $r$) along with confidence intervals. Take a look at these confidence intervals. Given that the correlation coefficient has possible values that range from -1 to +1, what do you think of the precision of our estimates? Are they precise or imprecise? How could we make them more precise? If you were to take a NHST approach to these data, which bivariate associations are statistically significant? Not significant?
+
+Now suppose we wanted to investigate one specific bivariate relationship: the association between ESS score and caffeine consumption. We can obtain the correlation coefficient, along with a test of the correlation's statistical significance, using the following command.
+
+```{r cor_test}
+cor.test(~ ESS + Caffeine, alternative = "two.sided", method = "pearson", conf.level = .95, data=Lab8Data)
+```
+
+Notice that the `cor.test` output performs significance testing based on the $t$ distribution and not the $z$ distribution, which we learned about in class. Although this was not covered in lecture, it is important to know that confidence intervals and NHST can be conducted for correlations by converting $r$ to $t$ instead of $r$ to $z$. You do not need to know the mechanics of this, but having this knowledge will help you interpret your output, whether it comes from `R` or some other statistical package. It is important to look closely to see if your hypothesis is being tested with (and your confidence intervals are being created from) a $t$ distribution or a $z$ distribution. It is also important to remember that when $df$ is roughly 40 or greater, the $t$ and the $z$ distributions are nearly identical.
+
+Thus far we have worked only with Pearson's Product Moment Correlation Coefficient (Pearson's $r$). However, Pearson's $r$ assumes that data are continuous and normally distributed. Often, however, those assumptions cannot be met. Two other correlation coefficients, Spearman's $rho$ and Kendall's $\tau$ (tau) can be used for data that are continuous, nominal, or ordinal. Spearman's $rho$ is a non-parametric test that uses rank orders of the variables, rather than the raw scores. To see a rank ordering of the ESS data, perform the following commands.
+
+```{r rank}
+NewESS <- data.frame(ESS = Lab8Data$ESS, RankESS = rank(Lab8Data$ESS))
+NewESS
+```
+
+Look at the data that were just printed to your screen. The `ESS` column shows the raw ESS data, while the `RankESS` column has ranked each of the `ESS` data points from smallest to largest. Any ties were assigned the average value of the two ranks (if the smallest value in the ESS column occurred twice, then each score would be assigned the average of 1+2, which is 1.5.). The Spearman correlation then essentially performs a Pearson's correlation on the ranked data. This can be useful when the data are continuous but non-normally distributed, or if there are one or more outliers. Here's how to calculate Spearman's $rho$ in `R`.
+
+```{r spearman}
+cor(Lab8Data, method = "spearman")
+```
+
+Next, we will calculate Kendall's $\tau$, which is another nonparametric test that uses ranked data.
+
+```{r kendall}
+cor(Lab8Data, method = "kendall")
+```
+
+>**Exercise 2. How do the values of Spearman's $rho$ and Kendall's $\tau$ compare to the values of Pearson's $r$? Identify the pairs that are the most similar and the most different. Is there a consistent pattern - in other words, does one variable seem to produce consistently larger or smaller values of $rho$ and $\tau$ compared to $r$? If so, investigate the scatterplot matrix and the corrgram plots that you created earlier and check to see whether these variables might have deviated from the assumptions of a Pearson's correlation. Write a brief (1-2 sentence) description of your findings.**
+
+>Answer: They are fairly similar. Because our data are not grossly non-normal, then the differences probably have more to do with the underlying calculations than the data. It's possible that, because people gave their answers as whole numbers, that the data are actually ordinal rather than continuous, which would suggest that the non-parametric statistics (Spearman & Kendall) might be more appropriate.
+
+Finally, let's look at what happens when another assumption - that of linearity - is violated. We'll create some fake data that do not follow a linear pattern, and then we'll examine the correlation coefficient in the data.
+
+```{r nonlinear}
+# create data in object x that contain integers ranging from 1 to 100
+x <- 1:100
+
+# create data in object y that is a logarithmic transformation of x
+y <-  log(x)
+
+# plot the values of x and y
+plot(x,y)
+
+# draw the line of best fit through the data.
+abline(lm(y~x))
+
+# calculate the Pearson's r correlation coefficient between x and y
+# with a test of statistical significance
+cor.test(x,y)
+```
+
+What was the observed correlation between x and y? Was this correlation significant? Should you trust this correlation as a good model of the association between x and y? Why or why not? What does this exercise teach you about data analysis?
+
+When performing original research that involves testing the statistical significance of a correlation coefficient, one of the first steps in the planning process is determining the statistical power of a study to detect a significant correlation coefficient. Power analysis can be performed in a manner that is similar to the power analysis that you learned for a $t$-test.
+
+As you may remember, the factors that influence power are sample size, effect size, and $\alpha$ level. We are attempting to solve for sample size, so we need an estimated effect size (Pearsons's $r$), $\alpha$ level, and a desired power. The power analysis is conducted by using Fisher's $r$-to-$z$ transformation, which you learned about in class.
+
+We can perform a power analysis using the following input parameters:
+
+  * $r = .30$
+  * $\alpha = .05$
+  * power = .80
+  
+```{r pwr.cor}
+library(pwr)
+pwr.r.test(n = NULL, r = .3, sig.level = .05, power = .80, alternative = "two.sided")
+```
+
+>**Exercise 3. Find the correlation coefficient for the weakest pairwise correlation (Pearson's $r$) you found in the sleep data. Perform a power calculation for an effect size of that magnitude when $\alpha = .01$ and $1-\beta = .95$. Paste your `R` input and output into the Word document that you hand in. Power calculations for correlation coefficients test $H_1$ against $H_0$, which is usually $r = 0$. Based on your reading of the $Cumming$ text, explain why $H_0: \rho = 0$ is usually a bad idea.**
+
+```{r pwr_E3}
+pwr.r.test(n = NULL, r = .07228, sig.level = .01, power = .95, alternative = "two.sided")
+```
+
+>Answer: Correlations of 0 are usually not theoretically important as a comparison standard. For example, in assessment contexts, reliability coefficients (which are correlations) should be at least .8. Therefore, depending on the context, researchers may prefer null values for $r$ that are more meaningful than 0.
+
+---
+
+# Simple Regression
+
+In contrast to correlation, when we examined bivariate correlations between two of the four variables, in this section we will alter our thinking to consider possible cause and effect relationships. Let's treat the Epworth Sleepiness Scale (`ESS`) as our outcome (dependent) variable and `Sleep`, `Work`, and `Caffeine` as our predictor variables, one at a time. 
+
+We'll start by asking the question: can a person's score on the ESS be explained by the average number of hours that person sleeps per night? First, let's take another look at the data to ensure that a linear model is appropriate.
+
+```{r lab8_2}
+library(car)
+scatterplot(Lab8Data$Sleep, Lab8Data$ESS, smooth=F)
+```
+
+Do you notice that some of the circles are slightly darker than other circles? Some of our data appears to be obscured due to overlapping data points. We can uncover these hidden points by applying "jitter" to the graph. This creates a tiny bit of random noise in the data and is used for plotting purposes, so we can see each point more clearly. We don't analyze the data that we applied jitter to - we just use it for plotting. Let's also add meaningful labels to the axes.
+
+```{r lab8_4}
+scatterplot(Lab8Data$Sleep, Lab8Data$ESS, smooth=F, jitter=list(x=1, y=1), xlab = "Sleep (hours per night)", ylab = "ESS Score")
+```
+
+Now, we should be able to visualize our data clearly and determine whether the relationship is non-linear. What do you think? Also, notice that boxplots are presented at the bottom and left of the scatterplot. What do you notice about these boxplots? Do they suggest the presence of any skewness or outliers? Keep this in mind, because these factors may come into play later.
+
+Since the data do not appear obviously non-linear, we can continue with our linear model. For a simple linear regression, the command in `R` is simple.
+
+```{r lab8_5}
+lm.ess.sleep <- lm(ESS ~ Sleep, data = Lab8Data)
+```
+
+The above command performed the linear regression and stored the results in an object called `lm.ess.sleep`. Now that it is stored in an `R` object, we can work with the results.
+
+From eyeballing the data, we are able to form a general interpretation of the bivariate relationship, but we'll need to examine the results of our model in order to make inferences about the population. Let's take a look at the overall results of our simple regression model.
+
+```{r lab8_7}
+summary(lm.ess.sleep)
+```
+
+>**Exercise 4. Copy the regression summary and paste it into your Word document. Is the regression model significant? Why or why not? How much variance in ESS is accounted for by hours of sleep per night?**
+
+>Answer: There is a significant effect of Sleep on ESS. Sleep explains 26.9% of the variance in ESS.
+
+As a good researcher, you realize that non-significant results can still be meaningful, especially when effect sizes can be used in a meta-analysis. You certainly would like to see the confidence intervals for your regression coefficients, to have a better idea of the plausible values for $\beta_0$ and $\beta_1$, the population parameters that are estimated by this simple regression.
+
+```{r lab8_8}
+confint(lm.ess.sleep)
+```
+
+>**Exercise 5. What are the 95% confidence intervals for $b_0$ and $b_1$? How do you interpret these?**
+
+>Answer: The CIs represent the intervals that are 95% likely to capture the true population slope and intercept.
+
+Before we can be confident in our results, we should perform regression diagnostics, which help us determine whether our data meet the assumptions of linear regression and to see whether there were any anomalies in our data that could be producing misleading results. We will examine four diagnostic plots. After the plots are graphed, we will install and load a package called "Global Validation of Linear Models Assumptions." This package is a very easy and effective way of ensuring that all assumptions of linear regression are met. Finally, we will run a function from the `car` package (loaded previously) that tests for outliers, called `outlierTest`.
+
+```{r lab8_9}
+par(mfrow=c(2,2))
+plot(lm.ess.sleep)
+par(mfrow=c(1,1))
+
+#install.packages("gvlma", dep = T)
+library(gvlma)
+gv.mod1 <- gvlma(lm.ess.sleep)
+summary(gv.mod1)
+
+outlierTest(lm.ess.sleep)
+```
+
+When you examine these plots, you may see some unfamiliar terms being used on the axes. The terms `Residuals` and `Normal Q-Q` you should know. `Fitted` values refer to the predicted values for ESS, rather than the actual values. To see the fitted values, use the following command:
+
+```{r lab8_95}
+fitted(lm.ess.sleep)
+```
+
+To further understand the fitted values, try the following commands:
+
+```{r lab8_9a}
+# create a scatterplot of the real data
+plot(Lab8Data$Sleep, Lab8Data$ESS) 
+
+# plot the Sleep data on the x-axis and the "fitted" values of ESS from the
+# linear model on the y-axis. Make them stand out by changing their color to 
+# red and giving them solid points. 
+points(Lab8Data$Sleep, fitted(lm.ess.sleep), col="red", pch = 16) 
+
+# draw the regression line through the data. Notice that the fitted values 
+# fall along the regression line for each "array" (vertical arrangement of 
+# real data points - open circles). That is, for every value on Sleep in our 
+# data, we have the real data (open circles) and the predicted (fitted) data 
+# (red closed circles).
+abline(lm.ess.sleep,col="red") 
+```
+
+Additionally, our diagnostic plots refer to terms such as `Scale-Location`, `Leverage`, and `Cook's distance`. For more information how to interpret these plots, see $Field$ section 7.9.5.
+
+>**Exercise 6. Briefly (3-4 sentences max) explain the results shown in these four diagnostic plots, in the output from the `gvlma()` function, and in the output from the `outlierTest()` function. Do they suggest that any assumptions have been violated? Can any outliers be identified? Are the regression results interpretable?**
+
+>Answer. It looks like the assumptions have been met, and the results are interpretable.
+
+Imagine that you are a psychologist who specializes in sleep disorders. You have a patient come to your office who is complaining about problems sleeping. You want to determine whether that person's ESS score is higher or lower than would be expected based on how much sleep she gets. You can use the results of this regression model to make a prediction of a person's ESS score based on the average number of hours that person spends sleeping per night. Let's assume that this person estimates that she sleeps 6.5 hours per night. What is her predicted ESS score based on your linear regression model? 
+
+```{r lab8_105}
+patientsleep <- data.frame(Sleep=6.5)
+predict(lm.ess.sleep, newdata = patientsleep, interval = "prediction", level = .95)
+```
+
+>**Exercise 7. Take a look at the predicted ESS value (labeled `fit`) and the 95% confidence intervals of your prediction (labeled `lwr` and `upr`). How do you interpret this prediction? How do these results tend to correspond with or differ from your interpretation of the linear model results?**
+
+>Answer. This person's predicted ESS is 5, but the margin of error in the prediction is fairly large; this person's true ESS value is likely captured by the interval ranging from .1958 to 9.804, with 95% confidence.
+
+In some situations, a standardized regression coefficient (also termed $\beta$ [beta, or beta weight]) is preferred over an unstandardized regression coefficient ($b_0$ or $b_1$). Usually, experts recommend reporting unstandardized ($b_0$, $b_1$) regression coefficients, but when comparing results across studies that may measure variables differently (e.g., minutes of sleep instead of hours), the regression coefficients won't be directly comparable unless standardized (scaled according to the mean and sd of the sample; that is, with $z$-scores.) To obtain standardized regression coefficients, use the command below:
+
+```{r lab8_10a, warning=FALSE, message=FALSE}
+#install.packages("QuantPsyc", dep = T)
+library(QuantPsyc)
+lm.beta(lm.ess.sleep)
+```
+
+This beta weight tells us that as hours of sleep increase by 1 SD, `ESS` score changes by the resulting number of standard deviations.
+
+The same result (but with more details available in the output) could be achieved by standardizing the variables as they are entered into the model, as shown below.
+
+```{r lab8_10b}
+lm.ess.sleep.beta <- lm(scale(ESS) ~ scale(Sleep), data = Lab8Data)
+summary(lm.ess.sleep.beta)
+round(coef(lm.ess.sleep.beta),4)
+round(confint(lm.ess.sleep.beta),4)
+```
+
+Based on the results obtained, you can obtain a 95% confidence interval for $R^2$, the statistic that provides an estimate of the proportion of variance in ESS accounted for by Sleep. Review the linear regression summary and find the $R^2$ value and the two $df$ values (regression and residual $df$; also termed numerator and denominator $df$). Then run the following commands.
+
+```{r lab8_11}
+#install.packages("MBESS", dep = T)
+library(MBESS)
+ci.R2(R2 = summary(lm.ess.sleep)$r.squared, df.1 = summary(lm.ess.sleep)$df[1], df.2 = summary(lm.ess.sleep)$df[2])
+```
+
+Examine the last line of code used to generate confidence intervals. Can you figure out why such seemingly complicated code was used (e.g., `df.1 = summary(lm.ess.sleep)$df[1]`)?
+
+Let's suppose that we wanted to perform a study where we obtained a more precise $R^2$ value. Instead of planning for power, we could plan for precision. In other words, what sample size would be necessary so that the 95% confidence interval widths (in both the positive and negative directions) for $R^2$ had an 80% chance of being less than or equal to .04 (meaning that if the true population value of $R^2$ is .05, the 95% CI for $R^2$ would be [.01, .09])? To answer this question, we'll enter the following arguments:
+
+  - `Population.R2 = .05` (Our guess as to the true value of $R^2$ in the population)  
+  - `conf.level = .95` (the confidence level we would like to use for our CIs)  
+  - `width = .04` (the width of the confidence intervals in both positive and negative directions)  
+  - `degree.of.certainty = .8` (if we ran our study an infinite number of times, how likely would it be that the results would be accurate - you decide what level of certainty you're comfortable with)  
+  - `p = 1` (number of predictors)
+
+```{r lab8_12}
+# From the MBESS package
+
+# Don't worry - this should take at least a few seconds for R to run
+ss.aipe.R2(Population.R2 = .05, conf.level = 0.95, width = .04, degree.of.certainty = .8, p = 1)
+# You will get a warning message about adding the 'verify.ss=TRUE' argument to your code. Don't do this unless you want to spend hours waiting for R to finish running.
+```
+
+Play around with the `ss.aipe.R2` function, altering the arguments in a systematic way and observing how your changes affect the sample size requirements. All arguments should be changed except for `p = 1` (because we are only dealing with 1 predictor today). Spend some time getting a sense for how sample size requirements for precision change as these arguments change.
+
+>**Exercise 8. Repeat the simple linear regression analyses performed above, but with the `Work` variable as the predictor variable (keep `ESS` as the dependent variable). Paste your input and all relevant output in your Word document.**
+
+```{r lab8_13}
+lm.ess.work <- lm(ESS ~ Work, data=Lab8Data)
+summary(lm.ess.work)
+
+par(mfrow=c(2,2))
+plot(lm.ess.work)
+par(mfrow=c(1,1))
+
+gv.mod2 <- gvlma(lm.ess.work)
+summary(gv.mod2)
+
+outlierTest(lm.ess.work)
+```
+
+>**Exercise 9. Repeat the simple linear regression analyses performed above, but with the `Caffeine` variable as the predictor variable (keep `ESS` as the dependent variable). Paste your input and all relevant output in your Word document.**
+
+```{r lab8_14}
+lm.ess.caff <- lm(ESS ~ Caffeine, data=Lab8Data)
+summary(lm.ess.caff)
+
+par(mfrow=c(2,2))
+plot(lm.ess.caff)
+par(mfrow=c(1,1))
+
+gv.mod3 <- gvlma(lm.ess.caff)
+summary(gv.mod3)
+
+outlierTest(lm.ess.caff)
+```
+
+>**Exercise 10. Write a brief (4-5 sentence) summary of the results you obtained in Exercises 8 and 9. Be sure to discuss the results of the model, the precision of the parameter estimates, and the model assumptions.**
+
+>Answer: All assumptions are met. There is no significant effect of Work or Caffeine on ESS. A big reason for this failure to find significance is due to the fact that the parameter estimates are fairly small and the sample size is not large enough to allow us to estimate these parameters with much precision.

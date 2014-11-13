@@ -1,0 +1,72 @@
+---
+title: "Lab 4 Answers"
+output: pdf_document
+---
+
+1. Should give a reasonable description of the distribution - at a minimum should include mean/median, variance/sd, skewness, and kurtosis.
+
+2. Should include the same details as question 1 as well as comparisons between the two in reference to some of these attributes.
+
+3. The mean of samp2 will, for some people, be higher than samp1; for others, it will be slightly lower. For some, it may be exactly equal. There is no correct answer here, unless they somehow misinterpret their data. The sample with 1000 will be the most accurate because it is more representative of the population (less error).
+
+4. There are 5000 elements in the sample.means50 object. The sampling distribution should be centered around the mean of the population. The distribution may change if we took 50,000 samples, and any changes would NOT necessarily change the mean or variance of the distribution; taking 50,000 samples would give us a more accurate estimate of the population sampling distribution of sample means.
+
+5. See below. Students will each have different data using random sampling. There are 100 elements in sample.means.small. Each element represents one mean calculated from a random sample of 50 houses drawn from the population.
+
+```{r lab4init, echo = F, eval=TRUE}
+load(url("http://www.openintro.org/stat/data/ames.RData"))
+area <- ames$Gr.Liv.Area
+price <- ames$SalePrice
+```
+
+```{r lab4init2, echo = F, eval=TRUE,}
+# summary(area)
+# hist(area)
+# 
+# set.seed(5810)
+# samp1 <- sample(area, 50)
+# 
+# mean(samp1)
+# 
+# sample.means50 <- rep(0, 5000)
+# for (i in 1:5000) {
+#   set.seed(5000+i)
+#   samp <- sample(area, 50)
+#   sample.means50[i] <- mean(samp)
+# }
+# 
+# hist(sample.means50)
+# 
+# hist(sample.means50, breaks = 25)
+# 
+# sample.means50 <- rep(0, 5000)
+# 
+# for (i in 1:5000) {
+#   set.seed(6000+i)
+#   samp <- sample(area, 50)
+#   sample.means50[i] <- mean(samp)
+#   print(i)
+# }
+# 
+# hist(sample.means50)
+```
+
+```{r lab4e5}
+sample.means.small <- rep(0, 100)
+for (i in 1:100) {
+  samp <- sample(area, 50)
+  sample.means.small[i] <- mean(samp)
+}
+sample.means.small
+```
+
+
+6. The center stays the same, because the mean of the sampling distribution of sample means should approximate the mean in the population. The spread decreases with increasing $N$ because the spread is measured by the standard error of the mean ($\frac{s}{sqrt{N}}$) - having the $N$ in the denominator means that as sample size increases, the standard error of the mean (the standard deviation of the sampling distribution of sample means) decreases.
+
+7. The distribution should be described as above. "Typical" usually refers to a measure of central tendency. Mean is most correct, but median or mode would also be accepted.
+
+8. Another student's results should differ slightly (but should be roughly similar) due to sampling error. Because random selection was used, different students will get different results.
+
+9. Confidence intervals may or may not overlap, but will for most students. CIs should be centered around the **sample mean**, not the population mean. CI widths should each be *roughly* 120 in both directions. If they differ widely from this number, something might have been done wrong.
+
+10. You would expect 95% of the confidence intervals to overlap the true population mean (so 19 of 20 students would be expected to find CIs that overlap). This is because 95% CIs mean that 95 of 100 CIs would be expected to overlap the true population value. 

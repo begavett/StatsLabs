@@ -1,0 +1,363 @@
+---
+output: pdf_document
+---
+PSY 5810: Lab 9 - Multiple Regression
+========================================================
+
+Assignment: complete the lab tasks as described below. As you work through the lab, you will find 10 exercises embedded within the statistical procedures that you perform. Perform all analyses in R and submit your input code and output only when specifically requested. Combine your R code with your written answers into a Microsoft Word document, and email this as a single file to Natalie (ngordon3@uccs.edu) by next Wednesday's lab. Be sure your full name is in the file or included on the printout.
+
+---
+
+In today's lab, we will move from simple regression to multiple regression. The data we will be using will be the HRS Study data that we used earlier in class. As we load this data set, we will learn how to import a data file into `R` from an SPSS file. The HRS Study data set is available as an SPSS file on the course webpage (http://bit.ly/PSY5810) in the "HRS Data/Data" folder. Download this file to the same directory where you have Lab8Data.csv stored. Then, in RStudio, use the bottom right window to navigate to the correct folder, so the "HRS_Data_5810.sav" file is visible in that window. Then, click the "More" button and then "Set As Working Directory." You should see the command be passed to your Console (lower left window in RStudio). Once you are in the correct directory, load the `foreign` package, which allows you to read in SPSS data. You can load the SPSS file using the following commands, which stores the data in an object called `hrs.data`:
+
+```{r lab9opts, echo=FALSE, eval=TRUE}
+library(knitr)
+opts_chunk$set(eval = TRUE, tidy=TRUE, tidy.opts=list(width.cutoff=60), warning = FALSE, error = FALSE, message = FALSE)
+```
+
+```{r loadspss,eval=TRUE}
+library(foreign)
+hrs.data <- read.spss("HRS_Data_5810.sav", to.data.frame = TRUE)
+```
+
+You may have gotten some warning messages when loading the data - that's fine, these are common when reading SPSS files in to `R`. But we will still need to check and verify that our data were loaded correctly. Because this is a big data set, we don't want to view all of the data, but we can take a few snapshots.
+
+```{r snapshots}
+# Examine the structure of the data
+str(hrs.data)
+
+# Look at the first six rows in the data
+head(hrs.data)
+```
+
+It is clear from these summaries that our data set is too cumbersome to work with, and we still have the problem of uninformative variable labels. We can improve our situation by dealing only with variables of interest. First, let's identify the variables we'll be using in today's lab, and then we'll rename them to something meaningful.
+
+We'll start by examining a dependent variable that is cognitive in nature (remember, your professor is a neuropsychologist!). Many cognitive variables, especially those that are used in large scale screening studies such as this, are non-normally distributed and are likely to violate the assumptions of linear regression. Fortunately, the HRS Data set contains a variable with good psychometric properties and a normal distribution, a test called the Number Series test. Navigate to the course webpage (http://bit.ly/PSY5810) and open the "HRS Data/Questionnaires" folder and find the "05hr10D.pdf" file. On page 20 of this file, you will find a description of the Number Series test. The Number Series test is one of the few variables in our data that has a meaningful name, which is `MNSSCORE`. To explore the descriptive statistics of this variable, use the following command:
+
+```{r nseries}
+summary(hrs.data$MNSSCORE)
+library(psych)
+describe(hrs.data$MNSSCORE)
+```
+
+Now that we've got our dependent variable, let's prepare our predictor variables. For now, we'll just stick to using continuous predictor variables, but later in the course we'll examine the use of categorical predictors. We're creating a hypothesis about the variables that can predict someone's performance on the Number Series test. The hypothesis we'll test is as follows:
+
+$$ \hat{MNSSCORE} = b_0 + b_1(age) + b_2(animal fluency) + b_3(diastolic BP) $$
+
+Age is age in years. Animal fluency is a test of rapid verbal generativity (number of animals named in 60 seconds). Diastolic BP is diastolic blood pressure, and may be a marker of cardiovascular health.
+
+To rename these variables to meaningful names, use the commands below:
+
+```{r rename, eval = TRUE}
+names(hrs.data)[5] <- "Age"
+names(hrs.data)[85] <- "Animals"
+names(hrs.data)[90] <- "Diastolic"
+```
+
+Now that these variables have meaningful names, let's create take a look at some summaries.
+
+```{r summary}
+str(hrs.data$MNSSCORE)
+str(hrs.data$Age)
+str(hrs.data$Animals)
+str(hrs.data$Diastolic)
+
+summary(hrs.data$MNSSCORE)
+summary(hrs.data$Age)
+summary(hrs.data$Animals)
+summary(hrs.data$Diastolic)
+
+library(psych)
+describe(hrs.data$MNSSCORE)
+describe(hrs.data$Age)
+describe(hrs.data$Animals)
+describe(hrs.data$Diastolic)
+```
+
+Take a look at these summaries to see if you can identify any outliers or incorrect values. It may help to plot the data.
+
+```{r spm}
+library(car)
+scatterplotMatrix(~MNSSCORE + Age + Animals + Diastolic, data=hrs.data, main = "Scatterplot Matrix for HRS Data", smoother=FALSE, diagonal = "histogram")
+```
+
+Did you notice any unexpected values? The most obvious problem appears to be in the **Diastolic** variable, which has a number of zero values. Having a diastolic blood pressure reading of 0 is biologically impossible (assuming the participant was alive!), and so we need to fix these data by turning any diastolic reading below 30 into missing data (NA). After we do that, we'll re-examine our data summaries.
+
+```{r fixna1}
+library(psych)
+library(car)
+hrs.data$Diastolic[hrs.data$Diastolic <30] <- NA
+hrs.data$Animals[hrs.data$Animals > (mean(hrs.data$Animals,na.rm=T)+(4*sd(hrs.data$Animals,na.rm=T)))] <- NA
+hrs.data.cc <- hrs.data[complete.cases(data.frame(hrs.data$MNSSCORE, hrs.data$Age, hrs.data$Animals, hrs.data$Diastolic)), ]
+```
+
+
+```{r fixna, eval = FALSE, echo = FALSE}
+hrs.data$Diastolic[hrs.data$Diastolic <30] <- NA
+
+describe(hrs.data$Diastolic)
+scatterplotMatrix(~MNSSCORE + Age + Animals + Diastolic, data=hrs.data, main = "Scatterplot Matrix for HRS Data", smoother=FALSE, diagonal = "histogram")
+```
+
+There also seems something awry with the high scores in the **Animals** data. Let's take a closer look and eliminate any implausible scores (which we'll define as 4 SDs above the mean). 
+
+```{r checkanimals}
+table(hrs.data$Animals)
+
+hrs.data$Animals[hrs.data$Animals > (mean(hrs.data$Animals,na.rm=T)+(4*sd(hrs.data$Animals,na.rm=T)))] <- NA
+
+describe(hrs.data$Animals)
+scatterplotMatrix(~MNSSCORE + Age + Animals + Diastolic, data=hrs.data, main = "Scatterplot Matrix for HRS Data", smoother=FALSE, diagonal = "histogram")
+```
+
+Now that we have cleaned our data, the next step is to determine the appropriate sample size for power and precision. First, we'll do a power analysis, and then we'll find the appropriate sample size for precision of our effect size estimates.
+
+Let's suppose, that based on a review of the literature, that you expect that the overall $R^2$ (proportion of variance in `MNSSCORE` accounted for by your three predictor variables) is .10. You would like to know what sample size is needed to achieve a power of .90 when $\alpha = .05$.
+
+To do this, you'll need to calculate the $f^2$ effect size statistic, which is $\frac{R^2}{1-R^2}$.
+
+```{r power}
+library(pwr)
+fsquared <- .10/(1-.10)
+pwr.for.MR <- pwr.f2.test(u = 3, f2 = fsquared, sig.level = .05, power = .90)
+pwr.for.MR
+```
+
+Next, you'll begin to plan for precision. Let's assume the following population values:
+
+|Parameter|Estimated Value|
+|---------|---------------|
+|$R^2$|.10|
+|$\beta_1$|-0.50|
+|$\beta_2$|2.00|
+|$\beta_3$|-0.05|
+
+It seems as though the variable that will pose the most problems for us in terms of getting a parameter estimate that is both significant and precise is the $b_3$ regression coefficient, which is based on Diastolic BP. The reason this one poses so much difficulty is that we need our 95% CI to be very precise (< .10 in total width) in order to ensure that it doesn't overlap with 0. So we'll start with this parameter in our precision planning.
+
+For this, we'll need to make one more assumption. We are already estimating that the full $R^2$, with Age, Animals, and Diastolic in the model is 0.10. We need to estimate what the $R^2$ would be after removing Diastolic. Let's say, for the sake of argument, that it would be .09.
+
+```{r precision_diastolic}
+library(MBESS)
+ss.aipe.rc(Rho2.Y_X = .10, Rho2.k_X.without.k = .09, K = 3, b.k = -0.05, width = .09, conf.level = .95, degree.of.certainty = .95)
+```
+
+Before we go further, we should also pare down our data into a sample that has no missing data on any of the four variables we're interested in. We'll create a subset of the `hrs.data` composed of all people with no missing data on MNSSCORE, Age, Animals, or Diastolic. Then we'll check the dimensions of the new data frame to see what our sample size is.
+
+```{r missing}
+hrs.data.cc <- hrs.data[complete.cases(data.frame(hrs.data$MNSSCORE, hrs.data$Age, hrs.data$Animals, hrs.data$Diastolic)), ]
+
+#This command produces the number of rows and columns in the data frame. The first number, the number of rows, is equal to the number of participants in the data frame.
+dim(hrs.data.cc)
+```
+
+>**Exercise 1. Summarize the results of the power analysis and precision analysis. Do you have an appropriate sample size to obtain statistical power and precision? How do the results of the power analysis and precision analysis agree? How do they disagree?**
+
+>Answer: Power analysis - need an $N$ of 132 (128 + 3 + 1). This is the bare minimum needed to find statistical significance. This estimate is very different from precision analysis, which tells us we need an $N$ of 1988. While both sample sizes would be expected to produce statistical significance at a power of .9, this discrepancy tells us that the power analysis sample size won't be sufficient to get us the desired degree of precision.
+
+Now that you have determined an appropriate sample size for power and precision, the next step is to build and evaluate the model.
+
+```{r buildmodel1, echo = FALSE, eval = FALSE}
+lm.ns <- lm(MNSSCORE ~ Age + Animals + Diastolic, data = hrs.data.cc)
+```
+
+```{r buildmodel}
+lm.ns <- lm(MNSSCORE ~ Age + Animals + Diastolic, data = hrs.data.cc)
+par(mfrow=c(2,2))
+plot(lm.ns)
+par(mfrow=c(1,1))
+
+library(gvlma)
+gvlma(lm.ns)
+
+summary(lm.ns)
+
+anova(lm.ns)
+
+confint(lm.ns)
+
+lm.ns.R2 <- summary(lm.ns)$r.squared
+ci.R2(R2 = lm.ns.R2, df.1 = 3, df.2 = 8106)
+```
+
+>**Exercise 2. Summarize the results that you just obtained. In 2-3 sentences, describe the results of the linear model, the precision of the model (95% CIs) and the model assumptions.**
+
+>Any reasonable summary is ok, assuming the numbers are incorrect or the data are interpreted incorrectly. In general, age and animal fluency were significant predictors of MNSSCORE. As age increases by one year, MNSSCORE decreases by -.39 points (95% CI [-.47, -.31]) and as animal fluency score increases by one point, MNSSCORE increases by 2.09 points (95% CI [1.96, 2.22]).
+
+Look specifically at the 95% confidence interval for Diastolic. Compare the overall width of this interval with the $a$ $priori$ width we sought when we did our precision planning. Did we obtain the level of precision we were hoping for? Why or why not?
+
+Although our assumption of linearity was met, other assumptions were not. Therefore, we may not be able to generalize our results beyond our sample or make inferences about the population parameters. We can use bootstrapping to try to overcome this major limitation.
+
+The first thing we need to do is to write our own functions in `R` in order to bootstrap the correct results. We want bootstrapped confidence intervals for $b_0$, $b_1$, $b_2$, $b_3$, $R^2$, and $f^2$. We'll create three functions: one for the $b$ coefficients, one for $R^2$, and one for $f^2$.
+
+Because these are new functions, they don't get entered one line at a time like regular `R` code. You'll need to write all of the code first, then highlight the entire code and run it.
+
+```{r boot.lm.init}
+# Warning: Copying and pasting this code is likely to alter the formatting in such a way that the code does not run successfully. If you copy and paste this code, make sure that is formatted identically to how it is shown below before executing.
+
+boot.b <- function(formula, data, i){
+  d <- data[i,]
+  fit <- lm(formula, data = d)
+  return(coef(fit))
+}
+
+boot.R2 <- function(formula, data, i){
+  d <- data[i,]
+  fit <- lm(formula, data = d)
+  return(summary(fit)$r.squared)
+}
+
+boot.f2 <- function(formula, data, i){
+  d <- data[i,]
+  fit <- lm(formula, data = d)
+  R2 <- summary(fit)$r.squared
+  f2 <- R2/(1-R2)
+  return(f2)
+}
+```
+
+What we've done here is written functions that require three arguments: `formula`, `data`, and `i`. `formula` is the same formula we use in our regression model, with the DV on the left of the tilde (~) and the IVs on the right of the tilde. `data` is the data set we use in our regression model. And `i` is an index of how many bootstrap samples we take. We can ignore the `i` argument. Inside the function (within the curly braces: { }) we go through the steps of running a linear model, which we store in a temporary object named `fit`, and then ask for the function to give us (`return`) the specific results we are seeking (either the regression coefficients, $R^2$ values, or $f^2$ values.) 
+
+Now that we've created our functions, the next step is to do the actual bootstrapping. But because we have such a large data set, running the boostrapping would take almost the entire lab period. Therefore, just the results will be presented - don't actually run these!
+
+```{r boot.lm}
+library(boot)
+bootResults.b <- boot(statistic = boot.b, formula = MNSSCORE ~ Age + Animals + Diastolic, data = hrs.data.cc, R = 100)
+
+bootResults.R2 <- boot(statistic = boot.R2, formula = MNSSCORE ~ Age + Animals + Diastolic, data = hrs.data.cc, R = 100)
+
+bootResults.f2 <- boot(statistic = boot.f2, formula = MNSSCORE ~ Age + Animals + Diastolic, data = hrs.data.cc, R = 100)
+```
+
+The above code creates three objects, one for each of our statistics (regression coefficients, $R^2$, and $f^2$), where it took random samples with replacemeent from the `hrs.data` database and ran a new linear regression model for each of those random samples. The `R = 10000` argument said to take 10000 random samples with replacement and store the results of all 10000 linear models in objects called `bootResults.b`, `bootResults.R2`, and `bootResults.f2`. Now, we could generate bootstrap confidence intervals for these statistics as shown below.
+
+You'll note that we need to use essentially the same code for $b_0$ through $b_3$, just changing the `index` parameter. This is because we've bootstrapped all 4 regression coefficients at once, and to view their 95% CIs one at a time, we ask for them individually using `index = `. Again, don't run these. The results are shown below.
+
+```{r boot.ci}
+ci.b0 <- boot.ci(bootResults.b, conf = .95, type = "bca", index = 1)
+ci.b1 <- boot.ci(bootResults.b, conf = .95, type = "bca", index = 2)
+ci.b2 <- boot.ci(bootResults.b, conf = .95, type = "bca", index = 3)
+ci.b3 <- boot.ci(bootResults.b, conf = .95, type = "bca", index = 4)
+ci.R2 <- boot.ci(bootResults.R2, conf = .95, type = "bca")
+ci.f2 <- boot.ci(bootResults.f2, conf = .95, type = "bca")
+
+ci.b0
+ci.b1
+ci.b2
+ci.b3
+ci.R2
+ci.f2
+```
+
+Take a look at these bootstrapped 95% confidence intervals and compare them to the 95% confidence intervals produced by the traditional method (`confint(lm.ns)`). How do they differ? Compare the precision of the **Diastolic** regression parameter using both methods, while considering the initial level of precision we had sought when we were planning for precision.
+
+As discussed previously, simpler models are usually preferable to more complex models. Our results may call into question the added value ("incremental validity") of the **Diastolic** variable. What would happen to the model if we removed this variable? Would the model fit better? How would we know?
+
+We can start by running the same linear model without **Diastolic** and then do a test to compare the models with and without this variable. To run the same model with **Diastolic** removed, we can use the `update()` function instead of typing out the whole model again.
+
+```{r update}
+
+# This code says to create a new object called lm.ns1 and to store the
+# updated model in this object. The update() function says to update
+# the previous model that we ran, lm.ns, by doing the following:
+# The .~. means to keep everything the same on the left and right
+# of the tilde, and the -Diastolic means to remove the Diastolic
+# variable from the right side of the equation.
+lm.ns1 <- update(lm.ns, .~.-Diastolic)
+
+summary(lm.ns1)
+
+# Now we can do a test to determine whether the three-parameter model (Age, Animals, Diastolic) fits better than the simpler two-parameter (Age, Animals) model.
+
+anova(lm.ns1, lm.ns)
+```
+
+>**Exercise 3. Based on the summaries from both the two- and three-parameter models, as well as the results of the `anova()` output that you just produced, does the Diastolic variable have any incremental validity in the linear model?**
+
+>Answer: No, it does not appear to improve prediction of MNSSCORE.
+
+>**Exercise 4. Load the sleep data we have been working with in lab. Build a linear regression model with Caffeine as the dependent variable and ESS, Sleep, and Work as the predictor variables. Paste your input and your model summary into your Word document.**
+
+```{r L9E4}
+sleep <- read.csv("Lab8Data.csv")
+caff.lm <- lm(Caffeine ~ ESS + Sleep + Work, data = sleep)
+summary(caff.lm)
+```
+
+Questions 5-10 apply to the data and results from Exercise 4.
+
+>**Exercise 5. Paste 95% confidence intervals for the model you generated in Exercise 4 into your Word document. Include confidence intervals for the regression coefficients and $R^2$. Provide a 2-3 sentence interpretation of these confidence intervals.**
+
+```{r L9E5}
+confint(caff.lm)
+```
+
+>**Exercise 6. Run regression diagnostics for the model you generated in Exercise 4. Paste your diagnostic plots and the results of the global validation of linear model assumptions into your word document and provide a 2-3 sentence interpretation of these results.**
+
+```{r L9E6}
+par(mfrow=c(2,2))
+plot(caff.lm)
+par(mfrow=c(1,1))
+library(gvlma)
+gvlma(caff.lm)
+```
+
+>Answer. The assumptions appear to be met. 
+
+>**Exercise 7. Generate bootstrapped 95% confidence intervals as shown above, with `R = 2000` replications. Paste your input and output into the word document and provide a 2-3 sentence interpretation of these results.**
+
+```{r L9E7}
+library(boot)
+boot.b <- function(formula, data, i){
+  d <- data[i,]
+  fit <- lm(formula, data = d)
+  return(coef(fit))
+}
+
+boot.R2 <- function(formula, data, i){
+  d <- data[i,]
+  fit <- lm(formula, data = d)
+  return(summary(fit)$r.squared)
+}
+
+boot.f2 <- function(formula, data, i){
+  d <- data[i,]
+  fit <- lm(formula, data = d)
+  R2 <- summary(fit)$r.squared
+  f2 <- R2/(1-R2)
+  return(f2)
+}
+
+bootResults.b <- boot(statistic = boot.b, formula = Caffeine ~ ESS + Sleep + Work, data = sleep, R = 100)
+
+bootResults.R2 <- boot(statistic = boot.R2, formula = Caffeine ~ ESS + Sleep + Work, data = sleep, R = 100)
+
+bootResults.f2 <- boot(statistic = boot.f2, formula = Caffeine ~ ESS + Sleep + Work, data = sleep, R = 100)
+
+ci.b0 <- boot.ci(bootResults.b, conf = .95, type = "bca", index = 1)
+ci.b1 <- boot.ci(bootResults.b, conf = .95, type = "bca", index = 2)
+ci.b2 <- boot.ci(bootResults.b, conf = .95, type = "bca", index = 3)
+ci.b3 <- boot.ci(bootResults.b, conf = .95, type = "bca", index = 4)
+ci.R2 <- boot.ci(bootResults.R2, conf = .95, type = "bca")
+ci.f2 <- boot.ci(bootResults.f2, conf = .95, type = "bca")
+
+ci.b0
+ci.b1
+ci.b2
+ci.b3
+ci.R2
+ci.f2
+```
+
+>Answer: Any reasonable summary is ok as long as it is not completely incorrect.
+
+>**Exercise 8. How do you interpret the intercept of this model? Is it "significantly" different from 0? In this case, does it make practical sense to interpret the results of the significance test for the intercept?**
+
+>Answer: The intercept is not significantly different from 0, but in this example, the intercept is not a meaningful parameter to interpret.
+
+>**Exercise 9. Present an APA style table with the results of your regression model. Be sure to include regression coefficients, 95% confidence intervals, standard errors, the t-test results, p-values, $R^2$, $\bar{R}^2$, 95% confidence intervals for $R^2$, the overall F statistic and its $p$ value.**
+
+>Answer: Any table is ok as long as it does not violate APA format.
+
+>**Exercise 10. Based on your regression diagnostics, can you tell whether any of the data points are exerting an undue amount of influence over the results? If no, state as such. If yes, update your model to run without this case, provide your input and output, and interpret the results.**
+
+>Answer: There do not appear to be any highly influential data points.

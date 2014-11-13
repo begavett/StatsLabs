@@ -1,0 +1,228 @@
+---
+output: pdf_document
+---
+PSY 5810: Lab 10 - One-Way ANOVA
+========================================================
+
+Assignment: complete the lab tasks as described below. As you work through the lab, you will find 10 exercises embedded within the statistical procedures that you perform. Perform all analyses in R and submit your input code and output only when specifically requested. Combine your R code with your written answers into a Microsoft Word document, and email this as a single file to Natalie (ngordon3@uccs.edu) by next Wednesday's lab. Be sure your full name is in the file or included on the printout.
+
+---
+
+Today's lab will focus on one-way analysis of variance. That is, we will compare 3 or more factor level means to one another in the context of ANOVA (as opposed to t-test) procedures. To begin, load the HRS Study data from the SPSS file, as you have learned previously in the course. Store the data in an object named `hrs.data`.
+
+```{r lab10opts}
+library(knitr)
+opts_chunk$set(eval = TRUE, tidy=TRUE, tidy.opts=list(width.cutoff=60), warning = FALSE, error = FALSE, message = FALSE)
+```
+
+```{r L10_LoadHRS}
+library(foreign)
+hrs.data <- read.spss("HRS_Data_5810.sav", to.data.frame = TRUE)
+```
+
+Once you have loaded the data, you can identify the variables of interest for today's lab and give them meaningful names. To find the current names in the `hrs.data` file, use the following command:
+
+```{r L10_Names}
+names(hrs.data)
+```
+
+We'll be using one continuous dependent variable and one independent variable that is a factor with multiple levels. The DV for the current analysis will be the same variable that we used last week, which is the score achieved on a number series test (`MNSSCORE`). In today's lab, we would like to test the hypothesis that cognitive ability, as measured by the Number Series test, varies based on how often someone attends religious services. This variable is captured with the label `MB082`. Let's change the name of `MB082` to something more meaningful: `FreqRS`. In order to make this change, we first have to know the column number that holds the variable `MB082`. You can figure this out by looking at the output from the `names()` function that you ran earlier. Along the left side of that output, you should see numbers, starting with `[1]` at the very top. The numbers mean that the variable directly adjacent (to the right) of a given number `[N]` is the Nth column in the data frame. Find `MB082` and see if you can figure out what column it's in. Once you have figured it out, you can rename it with the following command (replace `N` with the correct column number):
+
+```{r L10_rename, eval = FALSE}
+names(hrs.data)[N] <- "FreqRS"
+```
+
+```{r L10_rename2}
+names(hrs.data)[16] <- "FreqRS"
+```
+
+You can verify that your change was successful by re-examining the names of the `hrs.data` object.
+
+```{r L10_checkname}
+names(hrs.data)
+```
+
+Now that we've got our data ready to be used, let's create summaries of our variables to see what we'll be working with.
+
+```{r L10_summ}
+summary(hrs.data$FreqRS)
+str(hrs.data$FreqRS)
+head(hrs.data$FreqRS)
+
+library(psych)
+describe(hrs.data$MNSSCORE)
+str(hrs.data$MNSSCORE)
+head(hrs.data$MNSSCORE)
+
+by(hrs.data$MNSSCORE, hrs.data$FreqRS, describe)
+```
+
+>**Exercise 1. The last function described above, `by(...)` is a new function that you haven't learned yet. Run this command as specified above and take a look at the output. Also use the `?by` command to look at the help file. Summarize what we have done with this command and how it is used.**
+
+We should also create a visual description of our data. While we do this, we'll also introduce another new function that can be useful: `with()`. The `with()` function is a wrapper around another function that eliminates the need to put `hrs.data$` in front of your variable names. Basically, what it tells `R` to do is execute the commands "with" the specified data frame. This can be a good time saver, especially when you're working with a large number of variables in a data frame.
+
+```{r L10boxplots}
+with(hrs.data, boxplot(MNSSCORE ~ FreqRS))
+```
+
+Before we proceed, we should first identify our null hypothesis, $H_0$. We can write it as follows:
+
+$$ H_0: \mu_{1+ per week} = \mu_{1 per week} = \mu_{2-3 per mo} = \mu_{1+ per yr} = \mu_{never} $$ 
+
+As of yet, we have not specified a specific alternative hypothesis. But the general $H_1$ for the F test is simply that at least one of the five means in $H_0$ differs from at least one other mean.
+
+We can also come up with specific hypotheses about differences between the five levels of our factor. Although we've already taken a peek at our data, we should not let our hypotheses be derived from our data. Our hypotheses should be made $a$ $priori$ based on theory, not based on how our data collection happens to turn out. 
+
+With five levels of our IV, we could make a lot of different comparisons. In fact, the number of pairwise comparisons that are possible with five levels of an IV is $\frac{k!}{2(k-2)!}$. In our case, we have 5 levels of our factor, so $k=5$. Plugging in 5 for $k$, we see that there are $\frac{5!}{2(5-2)!} = \frac{120}{2(6)} = 10$ possible comparisons that can be made. But as you've learned, each additional comparison inflates the Type I error rate, so we don't necessarily want to conduct 10 different t-tests. Another option available to us is to make no $a$ $priori$ hypotheses and just see what differences emerge when we conduct $post$-$hoc$ tests. These have their own downside, in that they reduce your statistical power. The best approach is to make $a$ $priori$ hypotheses and then test them with your ANOVA - you get the best of both worlds: solid, theory-driven science and no inflation of Type I error rate. Gavett Law #2 says that you should always choose planned comparisons over post-hoc tests. So now, let's get started with some planned comparisons.
+
+Recent evidence suggests an inverse relationship between intelligence and religiosity (see the "Lab10 Materials" folder on the course web page for background information), and so our hypotheses should, as much as possible, reflect the current state of scientific evidence. Therefore, we'll make our planned comparisons reflect our theory, which states that people who attend church less often are more intelligent than people who attend church more often.
+
+* $H_{1a}: \mu_{never} > \mu_{church}$ (people who never attend church will score higher than people who attend church)
+
+* $H_{1b}: \mu_{1+ per yr} > \mu_{2-3+ per mo}$ (people who attend church, but less than 2-3 times per month will score higher than those who attend church 2-3 times a month or more)
+
+* $H_{1c}: \mu_{2-3 per mo} > \mu_{1-1+ per week}$ (people who attend church at least 2-3 times per month but less than once or more per week will score higher than those who attend church once per week or more)
+
+* $H_{1d}: \mu_{1 per week} > \mu_{1+ per week}$ (people who attend church once per week will score higher than those who attend church more than once per week)
+
+We have boiled our 10 possible hypotheses down to 4 orthogonal (independent) hypotheses to test. In order to execute these planned contrasts, they need to be made into a design matrix. The form of our design matrix is shown below.
+
+Variable                   |Contrast1|Contrast2|Contrast3|Contrast4
+-------------------------- | ------- | ------- | ------- | -------  
+More than once a week      |-.25       |-.333       |-.5       |-1
+Once a week                |-.25       |-.333       |-.5       |1
+Two or three times a month |-.25       |-.333     |1        |0
+One or more times a year   |-.25       |1        |0        |0
+Not at all                 |1        |0        |0        |0
+
+How do we create this design matrix in `R`?
+
+```{r L10design}
+contrast1 <- c(-.25, -.25, -.25, -.25, 1)
+contrast2 <- c(-1/3, -1/3, -1/3, 1, 0)
+contrast3 <- c(-.5, -.5, 1, 0, 0)
+contrast4 <- c(-1, 1, 0, 0, 0)
+planned.contrasts <- cbind(contrast1, contrast2, contrast3, contrast4)
+planned.contrasts
+contrasts(hrs.data$FreqRS) <- planned.contrasts
+contrasts(hrs.data$FreqRS)
+```
+
+We have now identified our hypotheses and set up our planned contrasts. Before we actually run our ANOVA, however, we should conduct a power analysis to determine whether we have an appropriate sample size (or, if we were collecting original data, to determine how many participants to recruit).
+
+For power analysis in ANOVA, sample size is dependent upon $df$ for the numerator (between groups), as well as effect size, $\alpha$ level and power. The effect size we can use is familiar to us. We have previously used $f^2$ to conduct power analyses for regression. If we take the square root of $f^2$ we get $f$, which is an effect size we can use to conduct power analyses for ANOVA. In the regression context, we obtained $f^2$ using $\frac{R^2}{1-R^2}$. In the ANOVA context, we replace $R^2$ with $\omega^2$. If we expect that the proportion of variance in Number Series scores accounted for by religious service attendance is $\omega^2 = .3$, then $f^2 = \frac{.3}{1-.3} = .42857$ and $f = \sqrt{f^2} = 0.6547$ (a large effect). If we set $\alpha = .05$ and desire power of .90, then our power analysis follows:
+
+```{r L10power}
+library(pwr)
+pwr.anova.test(k = 5, f = sqrt(.3/.7), sig.level = .05, power = .90)
+```
+
+>**Exercise 2. Based on the results of this power analysis, how many participants per group are needed to detect a signficant effect? How many total participants? Is the sample size of the current data large enough to possess our desired level of statistical power?**
+
+Precision analysis is done in a similar fashion, but requires a bit more advanced knowledge. Generally, you will need to look at previous research or pilot data to find the Mean Square value for the error (residual) - $MS_E$ or $MS_{Residual}$. Once you know this, precision analyses can be performed easily in R. If we want to perform precision analysis for one of our contrasts - say, contrast 1, which compares people who don't go to church to those who do - let's assume the following:
+
+* The expected difference between the two groups (church vs. no church) is 3 points on the Number Series test
+* We want to be able to estimate that three point difference with a precision of $\pm 2$ (i.e., Difference = 3, 95% CI [1,5]) - which means that the total width of the 95% confidence interval is 4 units.
+* Based on prior literature, $MS_E$ is 1900.
+
+Precision analysis is done as follows:
+
+```{r L10precision}
+library(MBESS)
+ss.aipe.c(MSwithin = 1900, c.weights = contrast1, width = 4, conf.level = .95, assurance = .90)
+```
+
+>**Exercise 3. Based on the results of this precision analysis, how many participants per group are needed to estimate the precision of contrast1 to the degree specified? How many total participants? Is the sample size of the current data large enough to provide us with our desired level of precision?**
+
+Now that we have determined the appropriate sample sizes necessary, we have one additional issue to consider before conducting our ANOVA. Because this was not a designed experiment and we did not recruit participants, we do not have equal sample sizes in our five levels of the church attendence factor.
+
+>**Exercise 4. Read Chapter 10 of $Field$, looking for information about the robustness of ANOVA to unequal cell sizes. Briefly (3-4 sentences) summarize this topic and indicate whether we should feel comfortable proceeding with unequal sample sizes.**
+
+One additional consequence of unequal sample sizes is how they might affect the homogeneity of variance assumption. Before we conduct our ANOVA, we can use Levene's test to determine whether this assumption is violated.
+
+```{r L10levene}
+library(car)
+with(hrs.data, leveneTest(MNSSCORE, FreqRS))
+```
+
+>**Exercise 5. Interpret the result of Levene's test. Do our data meet the homogeneity of variance assumption? What would happen if we had obtained the opposite result? Refer to chapter 10 of $Field$ to answer this question in 3-4 sentences.**
+
+To perform the ANOVA on our data and then examine the assumptions, we will use the following commands:
+
+```{r L10ANOVA}
+RS.anova <- aov(MNSSCORE ~ FreqRS, data = hrs.data)
+
+par(mfrow=c(2,2))
+plot(RS.anova)
+par(mfrow=c(1,1))
+
+library(gvlma)
+gvlma(lm(RS.anova))
+```
+
+Some of the assumptions appear to have been violated, which means we may wish to use robust ANOVA procedures to analyze our data. There are two procedures that we'll utilize. See the attached text for details and run the following commands.
+
+```{r L10RobustAOV}
+source("http://dornsife.usc.edu/assets/sites/239/docs/Rallfun-v26.txt")
+
+RS.ns <- data.frame(MNSSCORE = hrs.data$MNSSCORE, FreqRS = hrs.data$FreqRS)
+
+newRS.ns <- unstack(RS.ns, MNSSCORE ~ FreqRS)
+t1way(newRS.ns)
+t1waybt(newRS.ns)
+```
+
+The output labeled `test` from the two functions above is equivalent to the F statistic that we obtain in ANOVA. The p-values are intuitive - they are the p-values that we're used to seeing, and if we set $\alpha = .05$ then $p<.05$ is significant. Make note of the two F statistics produced by the methods above, and now take a look at the standard ANOVA results. 
+
+```{r L10sumANOVA}
+summary(RS.anova)
+```
+
+>**Exercise 6. How does the F statistic that you obtained through traditional ANOVA compare to the two robust F statistics that you obtained? How similar or different are they? What does this tell you about how robust the traditional ANOVA can be to violations of assumptions? Interpret the results of the traditional ANOVA output provided above. In your Word document, create an ANOVA table in APA format along with your written interpretation.**
+
+The ANOVA output provided above simply produces the omnibus F test without any details about the contrasts that we requested. We can look at the results of the linear model to determine whether our specific hypotheses were supported.
+
+```{r L10_summarylm}
+summary.lm(RS.anova)
+confint(RS.anova)
+```
+
+To assist with the interpretation of these contrasts and their regression coefficients, let's look at the mean number series scores of our five groups. The intercept is equivalent to the grand mean (the sum of the means of the five groups, divided by 5). The regression coefficient $b_1$ is $\frac{4}{5}$ of the mean difference between the contrast1 groups (if we wanted to know by how much the means of our first contrast differ, we would multiply 3.227 by $\frac{5}{4}$, which would yield `r 3.227*(5/4)`). Why? Our "any church" condition was given a value (-0.25) that was 1.25 units smaller than the "Not at all" condition (1). So as our value of x (-0.25) increases by 1.25 (to 1.0), our value of y (Number Series score) should increase by $1.25$ (or $\frac{5}{4}$) $\times 3.227 = `r 3.227*(5/4)`)$.
+
+Similarly, the regression coefficient $b_2$ is $\frac{3}{4}$ of the mean difference between the contrast2 groups (if we wanted to know by how much the means of our second contrast differ, we would multiply 6.069 by $\frac{4}{3}$, which would yield `r 6.069*(4/3)`). Why? Our "$\ge$ Two or three times a month" condition was given a value (-0.33) that was 1.33 units smaller than the "One or more times a year" condition (1). So as our value of x (-0.33) increases by 1.33 (to 1.0), our value of y (Number Series score) should increase by $1.33$ (or $\frac{4}{3}$) $\times 6.069 = `r 6.069*(4/3)`)$.
+
+The same logic applies to the third regression coefficient. The regression coefficient $b_3$ is $\frac{2}{3}$ of the mean difference between the contrast3 groups (if we wanted to know by how much the means of our third contrast differ, we would multiply 0.872 by $\frac{3}{2}$, which would yield `r 0.872*(3/2)`). Why? Our "$\ge$ Once a week" condition was given a value (-0.5) that was 1.5 units smaller than the "Two or three times a month" condition (1). So as our value of x (-0.5) increases by 1.5 (to 1.0), our value of y (Number Series score) should increase by $1.5$ (or $\frac{3}{2}$) $\times 0.872 = `r 0.872*(3/2)`)$.
+
+And finally, the regression coefficient $b_4$ is $\frac{1}{2}$ of the mean difference between the contrast4 groups (if we wanted to know by how much the means of our fourth contrast differ, we would multiply 0.583 by $\frac{2}{1}$, which would yield `r 0.583*(2/1)`). Why? Our "More than once a week" condition was given a value (-1) that was 2 units smaller than the "Two or three times a month" condition (1). So as our value of x (-1) increases by 2 (to 1.0), our value of y (Number Series score) should increase by $2$ (or $\frac{2}{1}$) $\times 0.583 = `r 0.583*(2/1)`)$.
+
+>**Exercise 7. Provide an interpretation of the results of the four planned contrasts that were tested.**
+
+Although it is less scientifically sound, many researchers fail to employ planned comparisons to test $a$ $priori$ hypotheses and instead rely on $post$ $hoc$ tests following a significant F statistic to determine which means are significant. 
+
+Some $post$ $hoc$ functions are built into `R` - these can be used for the exercises below.
+
+Read section 10.6.8 from $Field$ as you work through the remaining exercises.
+
+The Bonferroni and related methods (e.g., Benjamini-Hochberg) can be executed using the `pairwise.t.test()` function.
+
+Tukey's HSD can be executed with the `TukeyHSD()` function.
+
+>**Exercise 8. Use the `TukeyHSD` function to perform post-hoc comparisons. Store the results of this function into a new object named `posthoc.HSD`. Then execute `plot(posthoc.HSD)`. Paste your input and output (including the plot) into your Word document. Compare the numerical output to the plot. How do you interpret the results?**
+
+```{r L10E8}
+posthoc.HSD <- TukeyHSD(RS.anova)
+posthoc.HSD
+plot(posthoc.HSD)
+```
+
+>**Exercise 9. Perform a Bonferroni post-hoc test with Holm's method. Provide a brief (2-3 sentence) interpretation of the results. Copy and paste all of your input and output. You may need to use `?pairwise.t.test` for assistance.** 
+
+```{r L10E9}
+pairwise.t.test(hrs.data$MNSSCORE, hrs.data$FreqRS, p.adj = "holm")
+```
+
+>**Exercise 10. Perform a Bonferroni post-hoc test with the Benjamini-Hochberg method. Provide a brief (2-3 sentence) interpretation of the results. Copy and paste all of your input and output. You may need to use `?pairwise.t.test` for assistance.** 
+
+```{r L10E10}
+pairwise.t.test(hrs.data$MNSSCORE, hrs.data$FreqRS, p.adj = "BH")
+```
